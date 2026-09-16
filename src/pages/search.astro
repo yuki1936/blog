@@ -1,0 +1,146 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="搜索" description="全站搜索。" wide>
+  <header class="page-header">
+    <p class="eyebrow">Search</p>
+    <h1>搜索</h1>
+  </header>
+
+  <label class="field-label">
+    关键词
+    <input class="field search-field" id="search-input" type="search" placeholder="输入关键词，如 markweft 或 猫" autocomplete="off" />
+  </label>
+
+  <p id="search-status" class="status-line" aria-live="polite">等待输入</p>
+  <div id="search-results" class="search-results"></div>
+</BaseLayout>
+
+<script>
+  interface PagefindResult {
+    data: () => Promise<{ url: string; excerpt: string; meta?: { title?: string } }>;
+  }
+
+  interface Pagefind {
+    search: (query: string) => Promise<{ results: PagefindResult[] }>;
+  }
+
+  const input = document.querySelector<HTMLInputElement>("#search-input");
+  const status = document.querySelector<HTMLElement>("#search-status");
+  const results = document.querySelector<HTMLElement>("#search-results");
+
+  let pagefind: Pagefind | null = null;
+  let loadFailed = false;
+
+  async function ensurePagefind(): Promise<Pagefind | null> {
+    if (pagefind || loadFailed) return pagefind;
+    try {
+      // pagefind 是构建产物，必须在运行时加载。
+      // 用 new Function 构造原生 import，绕开打包器对 import() 的重写。
+      const runtimeImport = new Function("url", "return import(url)") as (
+        url: string,
+      ) => Promise<Pagefind>;
+      pagefind = await runtimeImport("/pagefind/pagefind.js");
+    } catch {
+      loadFailed = true;
+    }
+    return pagefind;
+  }
+
+  function setStatus(message: string, state = "") {
+    if (!status) return;
+    status.textContent = message;
+    status.dataset.state = state;
+  }
+
+  let searchTimer: number | undefined;
+  input?.addEventListener("input", () => {
+    window.clearTimeout(searchTimer);
+    searchTimer = window.setTimeout(runSearch, 220);
+  });
+
+  async function runSearch() {
+    const query = input?.value.trim() ?? "";
+    const index = await ensurePagefind();
+    if (!index) {
+      setStatus("搜索索引不可用（开发模式下请先构建）", "error");
+      return;
+    }
+    if (query.length === 0) {
+      results?.replaceChildren();
+      setStatus("等待输入");
+      return;
+    }
+
+    const { results: found } = await index.search(query);
+    if (!results) return;
+    results.replaceChildren();
+
+    if (found.length === 0) {
+      setStatus(`没有与 “${query}” 匹配的结果`, "error");
+      return;
+    }
+
+    for (const item of found) {
+      const data = await item.data();
+      const row = document.createElement("a");
+      row.className = "search-row";
+      row.href = data.url;
+      row.innerHTML = `<strong>${data.meta?.title ?? data.url}</strong><span class="search-excerpt">${data.excerpt}</span>`;
+      results.append(row);
+    }
+    setStatus(`找到 ${found.length} 条结果`, "success");
+  }
+</script>
+
+<style>
+  .page-header {
+    margin-bottom: 34px;
+  }
+
+  .search-field {
+    font-size: 1rem;
+  }
+
+  .search-results {
+    display: grid;
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  .search-row {
+    display: grid;
+    gap: 6px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    text-decoration: none;
+  }
+
+  .search-row:hover {
+    border-color: var(--border-strong);
+    background: var(--surface);
+  }
+
+  .search-row strong {
+    color: var(--text);
+    font-size: 0.95rem;
+    font-weight: 650;
+  }
+
+  .search-row:hover strong {
+    color: var(--accent-strong);
+  }
+
+  .search-excerpt {
+    color: var(--muted);
+    font-size: 0.82rem;
+    line-height: 1.6;
+  }
+
+  .search-excerpt :global(mark) {
+    color: var(--text);
+    background: var(--surface-raised);
+  }
+</style>

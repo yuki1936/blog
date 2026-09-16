@@ -1,0 +1,342 @@
+---
+import { getCollection, render } from "astro:content";
+import { ChevronDown, Link2, ListTree } from "@lucide/astro";
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import {
+  categoryMeta,
+  formatDate,
+  getArticleCategory,
+  getArticleSlug,
+  readingMinutes,
+  sortArticles,
+  type Article,
+} from "../../../lib/articles";
+
+export async function getStaticPaths() {
+  const all = await getCollection("articles", ({ data }) => !data.draft);
+  return all.map((article) => {
+    const [category, slug] = getArticleSlug(article).split("/");
+    const siblings = sortArticles(
+      all.filter((candidate) => getArticleCategory(candidate) === category),
+    );
+    const index = siblings.findIndex((candidate) => candidate.id === article.id);
+    return {
+      params: { category, slug },
+      props: {
+        article,
+        newer: siblings[index - 1] ?? null,
+        older: siblings[index + 1] ?? null,
+      },
+    };
+  });
+}
+
+interface Props {
+  article: Article;
+  newer: Article | null;
+  older: Article | null;
+}
+
+const { article, newer, older } = Astro.props;
+const category = getArticleCategory(article);
+const { Content, headings } = await render(article);
+const tocItems = headings.filter((heading) => heading.depth === 2);
+const showToc = tocItems.length >= 2;
+const minutes = readingMinutes(article.body ?? "");
+---
+
+<BaseLayout
+  title={article.data.title}
+  description={article.data.description}
+  ogType="article"
+  wide
+>
+  <article>
+    <header class="article-header">
+      <a class="article-category" href={`/articles/${category}/`}>
+        {categoryMeta[category].label}
+      </a>
+      <h1>{article.data.title}</h1>
+      {
+        article.data.description && (
+          <p class="article-description">{article.data.description}</p>
+        )
+      }
+      <div class="article-dates">
+        <time datetime={article.data.published.toISOString()}>
+          发布于 {formatDate(article.data.published)}
+        </time>
+        {
+          article.data.updated && (
+            <time datetime={article.data.updated.toISOString()}>
+              更新于 {formatDate(article.data.updated)}
+            </time>
+          )
+        }
+        <span>约 {minutes} 分钟</span>
+      </div>
+    </header>
+    {
+      showToc && (
+        <nav class="article-toc" aria-label="本文目录">
+          <details>
+            <summary>
+              <span class="toc-title">
+                <ListTree size={17} stroke-width={1.8} aria-hidden="true" />
+                本文目录
+              </span>
+              <span class="toc-meta">
+                {tocItems.length} 节
+                <ChevronDown
+                  class="toc-chevron"
+                  size={16}
+                  stroke-width={1.8}
+                  aria-hidden="true"
+                />
+              </span>
+            </summary>
+            <ol>
+              {tocItems.map((heading) => (
+                <li>
+                  <a href={`#${heading.slug}`}>{heading.text}</a>
+                </li>
+              ))}
+            </ol>
+          </details>
+        </nav>
+      )
+    }
+    <div class="prose">
+      <Content />
+    </div>
+    {
+      (older || newer) && (
+        <nav class="article-neighbors" aria-label="相邻文章">
+          {older ? (
+            <a class="neighbor" href={`/articles/${getArticleSlug(older)}/`}>
+              <small>上一篇</small>
+              <span>{older.data.title}</span>
+            </a>
+          ) : (
+            <span class="neighbor neighbor-empty" aria-hidden="true" />
+          )}
+          {newer ? (
+            <a class="neighbor neighbor-next" href={`/articles/${getArticleSlug(newer)}/`}>
+              <small>下一篇</small>
+              <span>{newer.data.title}</span>
+            </a>
+          ) : (
+            <span class="neighbor neighbor-empty" aria-hidden="true" />
+          )}
+        </nav>
+      )
+    }
+    <template id="heading-anchor-template">
+      <a class="heading-anchor" title="此节链接">
+        <Link2 size={15} stroke-width={1.8} aria-hidden="true" />
+      </a>
+    </template>
+  </article>
+</BaseLayout>
+
+<script>
+  const template = document.querySelector<HTMLTemplateElement>("#heading-anchor-template");
+
+  if (template) {
+    for (const heading of document.querySelectorAll<HTMLElement>(
+      ".prose h2[id], .prose h3[id]",
+    )) {
+      if (heading.querySelector(".heading-anchor")) continue;
+      const anchor = template.content.firstElementChild?.cloneNode(true);
+      if (!(anchor instanceof HTMLAnchorElement)) continue;
+      anchor.href = `#${heading.id}`;
+      anchor.setAttribute("aria-label", `链接到“${heading.textContent?.trim() ?? "此节"}”`);
+      heading.append(" ", anchor);
+    }
+  }
+</script>
+
+<style>
+  article {
+    max-width: 720px;
+  }
+
+  .article-header {
+    margin-bottom: 58px;
+    padding-bottom: 30px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .article-category {
+    display: inline-block;
+    margin-bottom: 12px;
+    color: var(--accent);
+    font-size: 0.82rem;
+    text-decoration: none;
+  }
+
+  .article-header h1 {
+    font-size: 1.85rem;
+  }
+
+  .article-description {
+    margin: 16px 0 0;
+    color: var(--muted);
+    font-size: 1.04rem;
+  }
+
+  .article-dates {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 22px;
+    color: var(--faint);
+    font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+    font-size: 0.72rem;
+  }
+
+  .article-toc {
+    margin: -18px 0 58px;
+    border-block: 1px solid var(--border);
+  }
+
+  .article-toc summary {
+    display: flex;
+    min-height: 48px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    color: var(--muted);
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .article-toc summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .toc-title,
+  .toc-meta {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .toc-title {
+    gap: 8px;
+    color: var(--text);
+    font-size: 0.84rem;
+    font-weight: 650;
+  }
+
+  .toc-meta {
+    flex: none;
+    gap: 6px;
+    color: var(--faint);
+    font-size: 0.75rem;
+  }
+
+  .toc-chevron {
+    transition: transform 160ms ease;
+  }
+
+  .article-toc details[open] .toc-chevron {
+    transform: rotate(180deg);
+  }
+
+  .article-toc ol {
+    max-height: 55vh;
+    margin: 0 0 20px;
+    padding: 2px 0 0 1.7rem;
+    overflow-y: auto;
+    color: var(--faint);
+  }
+
+  .article-toc li {
+    padding-left: 4px;
+  }
+
+  .article-toc li + li {
+    margin-top: 8px;
+  }
+
+  .article-toc a {
+    color: var(--muted);
+    font-size: 0.88rem;
+    text-decoration: none;
+  }
+
+  .article-toc a:hover,
+  .article-toc a:focus-visible {
+    color: var(--accent-strong);
+  }
+
+  .article-neighbors {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 58px;
+    padding-top: 26px;
+    border-top: 1px solid var(--border);
+  }
+
+  .neighbor {
+    display: grid;
+    align-content: start;
+    gap: 5px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    text-decoration: none;
+  }
+
+  .neighbor:hover {
+    border-color: var(--border-strong);
+  }
+
+  .neighbor small {
+    color: var(--faint);
+    font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+    font-size: 0.72rem;
+  }
+
+  .neighbor span {
+    color: var(--text);
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1.45;
+  }
+
+  .neighbor:hover span {
+    color: var(--accent-strong);
+  }
+
+  .neighbor-next {
+    text-align: right;
+  }
+
+  .neighbor-empty {
+    visibility: hidden;
+  }
+
+  @media (max-width: 640px) {
+    .article-header h1 {
+      font-size: 1.65rem;
+    }
+
+    .article-toc {
+      margin-bottom: 46px;
+    }
+
+    .article-neighbors {
+      grid-template-columns: 1fr;
+    }
+
+    .neighbor-empty {
+      display: none;
+    }
+
+    .neighbor-next {
+      text-align: left;
+    }
+  }
+</style>

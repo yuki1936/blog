@@ -1,0 +1,95 @@
+---
+import {
+  Braces,
+  Clock,
+  FileOutput,
+  Hash,
+  Image as ImageIcon,
+  KeyRound,
+  Network,
+  Router,
+  ScanLine,
+} from "@lucide/astro";
+import ToolLink from "../../components/ToolLink.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="工具" description="无需上传数据的日常浏览器工具。" wide>
+  <header class="tools-header">
+    <h1>tools</h1>
+  </header>
+  <div class="tool-grid">
+    <ToolLink
+      href="/tools/dns-lookup/"
+      title="DNS 查询"
+      description="查询 A、AAAA、MX、TXT 等常见 DNS 记录。"
+      icon={Network}
+    />
+    <ToolLink
+      href="/tools/json-viewer/"
+      title="JSON Viewer"
+      description="树形查看 JSON，并生成 Rust 或 Go 数据结构。"
+      icon={Braces}
+    />
+    <ToolLink
+      href="/tools/image-processor/"
+      title="图片处理"
+      description="本地完成图片裁切、缩放与格式转换。"
+      icon={ImageIcon}
+    />
+    <ToolLink
+      href="/tools/blurhash-tool/"
+      title="BlurHash 编解码"
+      description="生成、解码并比较 BlurHash 图片占位图。"
+      icon={ScanLine}
+    />
+    <ToolLink
+      href="/tools/markup-converter/"
+      title="标记语言转换"
+      description="在 Markdown、HTML、Typst 与 LaTeX 之间转换。"
+      icon={FileOutput}
+    />
+    <ToolLink
+      href="/tools/hash-calculator/"
+      title="哈希计算器"
+      description="计算文本或文件的 SHA-1/256/384/512 摘要。"
+      icon={Hash}
+    />
+    <ToolLink
+      href="/tools/codec/"
+      title="编解码工具"
+      description="Base64、URL 编解码与 JWT 结构解析。"
+      icon={KeyRound}
+    />
+    <ToolLink
+      href="/tools/cidr/"
+      title="CIDR 子网计算器"
+      description="计算 IPv4 网络地址、掩码与可用主机范围。"
+      icon={Router}
+    />
+    <ToolLink
+      href="/tools/timestamp-cron/"
+      title="时间戳与 Cron"
+      description="时间戳互转与 Cron 表达式中文释义。"
+      icon={Clock}
+    />
+  </div>
+</BaseLayout>
+
+<style>
+  .tools-header {
+    margin-bottom: 36px;
+  }
+
+  .tool-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  @media (max-width: 800px) {
+    .tool-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

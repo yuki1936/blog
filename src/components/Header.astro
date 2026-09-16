@@ -1,0 +1,170 @@
+---
+import { BookOpen, Link2, Moon, Search, Sun, Wrench } from "@lucide/astro";
+
+const pathname = Astro.url.pathname;
+const isArticles = pathname.startsWith("/articles");
+const isTools = pathname.startsWith("/tools");
+---
+
+<header class="site-header">
+  <nav class="nav shell" aria-label="主导航">
+    <a class="brand" href="/" aria-label="yuki1936 首页">
+      <span>yuki1936</span>
+    </a>
+    <div class="nav-links">
+      <a class:list={{ active: isArticles }} href="/articles/">
+        <BookOpen size={16} stroke-width={1.8} aria-hidden="true" />
+        <span>文章</span>
+      </a>
+      <a class:list={{ active: isTools }} href="/tools/">
+        <Wrench size={16} stroke-width={1.8} aria-hidden="true" />
+        <span>工具</span>
+      </a>
+      <a class:list={{ active: pathname === "/links/" }} href="/links/">
+        <Link2 size={16} stroke-width={1.8} aria-hidden="true" />
+        <span>友链</span>
+      </a>
+      <a class:list={{ active: pathname === "/about/" }} href="/about/">关于</a>
+      <a class:list={{ active: pathname === "/search/" }} class="icon-link" href="/search/" aria-label="搜索">
+        <Search size={16} stroke-width={1.8} aria-hidden="true" />
+      </a>
+      <button id="theme-toggle" type="button" aria-label="切换主题" aria-pressed="false">
+        <Sun class="icon-sun" size={16} stroke-width={1.8} aria-hidden="true" />
+        <Moon class="icon-moon" size={16} stroke-width={1.8} aria-hidden="true" />
+      </button>
+    </div>
+  </nav>
+</header>
+
+<script>
+  const button = document.querySelector<HTMLButtonElement>("#theme-toggle");
+  const root = document.documentElement;
+  const meta = document.querySelector('meta[name="theme-color"]');
+
+  const sync = () => {
+    const dark = root.classList.contains("dark");
+    button?.setAttribute("aria-pressed", String(dark));
+    button?.setAttribute("aria-label", dark ? "切换到浅色主题" : "切换到深色主题");
+    meta?.setAttribute("content", dark ? "#09090b" : "#ffffff");
+  };
+
+  sync();
+
+  button?.addEventListener("click", () => {
+    const dark = !root.classList.contains("dark");
+    root.classList.toggle("dark", dark);
+    try {
+      localStorage.setItem("theme", dark ? "dark" : "light");
+    } catch {
+      // localStorage 不可用时仅本次会话生效
+    }
+    sync();
+  });
+</script>
+
+<style>
+  .site-header {
+    position: sticky;
+    z-index: 20;
+    top: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
+    backdrop-filter: blur(12px);
+  }
+
+  .nav {
+    display: flex;
+    height: 64px;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .brand {
+    display: inline-flex;
+    height: 34px;
+    align-items: center;
+    padding-inline: 11px;
+    border: 1px solid var(--border-strong);
+    border-radius: 5px;
+    color: var(--text);
+    background: var(--surface);
+    font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .brand:hover {
+    border-color: var(--accent);
+    color: var(--accent-strong);
+  }
+
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .nav-links a {
+    display: inline-flex;
+    height: 36px;
+    align-items: center;
+    gap: 7px;
+    padding-inline: 11px;
+    border-radius: 5px;
+    color: var(--muted);
+    font-size: 0.88rem;
+    text-decoration: none;
+  }
+
+  .nav-links a:hover,
+  .nav-links a.active {
+    color: var(--text);
+    background: var(--surface);
+  }
+
+  .nav-links a.active {
+    box-shadow: inset 0 -2px var(--accent);
+  }
+
+  .theme-toggle {
+    display: inline-flex;
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 5px;
+    color: var(--muted);
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .theme-toggle:hover {
+    color: var(--text);
+    background: var(--surface);
+  }
+
+  .icon-moon {
+    display: none;
+  }
+
+  :global(html.dark) .icon-moon {
+    display: block;
+  }
+
+  :global(html.dark) .icon-sun {
+    display: none;
+  }
+
+  @media (max-width: 440px) {
+    .nav-links a:not(.icon-link) {
+      padding-inline: 8px;
+    }
+
+    .nav-links a:not(.icon-link) svg {
+      display: none;
+    }
+  }
+</style>

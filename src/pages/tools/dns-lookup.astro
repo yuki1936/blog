@@ -1,0 +1,270 @@
+---
+import { Search } from "@lucide/astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="DNS 查询" description="通过 DNS-over-HTTPS 查询常见 DNS 记录。" wide>
+  <header class="tool-header">
+    <p class="eyebrow">Tools / DNS Lookup</p>
+    <h1>DNS 查询</h1>
+    <p class="lede">查询通过 Cloudflare DNS-over-HTTPS 完成。</p>
+  </header>
+
+  <form id="dns-form" class="query-bar">
+    <label class="field-label domain-field">
+      域名
+      <input class="field" id="dns-name" name="name" type="text" inputmode="url" placeholder="example.com" required />
+    </label>
+    <label class="field-label type-field">
+      记录类型
+      <select class="select" id="dns-type" name="type">
+        <option>A</option>
+        <option>AAAA</option>
+        <option>CNAME</option>
+        <option>MX</option>
+        <option>TXT</option>
+        <option>NS</option>
+        <option>SOA</option>
+        <option>CAA</option>
+        <option>SRV</option>
+        <option>HTTPS</option>
+      </select>
+    </label>
+    <button class="tool-button primary query-button" type="submit">
+      <Search size={17} aria-hidden="true" /> 查询
+    </button>
+  </form>
+
+  <div class="result-header">
+    <p id="dns-status" class="status-line" aria-live="polite">等待查询</p>
+    <span id="dns-flags"></span>
+  </div>
+  <div class="result-table-wrap">
+    <table class="result-table">
+      <thead>
+        <tr>
+          <th>名称</th>
+          <th>类型</th>
+          <th>TTL</th>
+          <th>结果</th>
+        </tr>
+      </thead>
+      <tbody id="dns-results">
+        <tr class="placeholder-row"><td colspan="4">暂无结果</td></tr>
+      </tbody>
+    </table>
+  </div>
+</BaseLayout>
+
+<script>
+  interface DnsAnswer {
+    name: string;
+    type: number;
+    TTL: number;
+    data: string;
+  }
+
+  interface DnsResponse {
+    Status: number;
+    AD: boolean;
+    CD: boolean;
+    Answer?: DnsAnswer[];
+    Authority?: DnsAnswer[];
+    Comment?: string;
+  }
+
+  const typeNames: Record<number, string> = {
+    1: "A",
+    2: "NS",
+    5: "CNAME",
+    6: "SOA",
+    12: "PTR",
+    15: "MX",
+    16: "TXT",
+    28: "AAAA",
+    33: "SRV",
+    257: "CAA",
+    65: "HTTPS",
+  };
+
+  const statusNames: Record<number, string> = {
+    0: "NOERROR",
+    1: "FORMERR",
+    2: "SERVFAIL",
+    3: "NXDOMAIN",
+    4: "NOTIMP",
+    5: "REFUSED",
+  };
+
+  const form = document.querySelector<HTMLFormElement>("#dns-form");
+  const nameInput = document.querySelector<HTMLInputElement>("#dns-name");
+  const typeInput = document.querySelector<HTMLSelectElement>("#dns-type");
+  const status = document.querySelector<HTMLElement>("#dns-status");
+  const flags = document.querySelector<HTMLElement>("#dns-flags");
+  const results = document.querySelector<HTMLTableSectionElement>("#dns-results");
+  const QUERY_TIMEOUT_MS = 10_000;
+  let activeQuery: AbortController | undefined;
+
+  function setStatus(message: string, state = "") {
+    if (!status) return;
+    status.textContent = message;
+    status.dataset.state = state;
+  }
+
+  function addCell(row: HTMLTableRowElement, value: string) {
+    const cell = row.insertCell();
+    cell.textContent = value;
+  }
+
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const name = nameInput?.value.trim().replace(/^https?:\/\//i, "").split("/")[0];
+    const type = typeInput?.value ?? "A";
+    if (!name || !results || !flags) return;
+
+    activeQuery?.abort();
+    const controller = new AbortController();
+    activeQuery = controller;
+    let timedOut = false;
+    const timeout = window.setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, QUERY_TIMEOUT_MS);
+    setStatus("正在查询…");
+    flags.textContent = "";
+
+    try {
+      const endpoint = new URL("https://cloudflare-dns.com/dns-query");
+      endpoint.search = new URLSearchParams({ name, type, do: "true" }).toString();
+      const response = await fetch(endpoint, {
+        headers: { Accept: "application/dns-json" },
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const data = (await response.json()) as DnsResponse;
+      if (activeQuery !== controller) return;
+      const answers = data.Answer ?? data.Authority ?? [];
+      results.replaceChildren();
+
+      if (answers.length === 0) {
+        const row = results.insertRow();
+        row.className = "placeholder-row";
+        const cell = row.insertCell();
+        cell.colSpan = 4;
+        cell.textContent = data.Comment || "响应中没有记录";
+      } else {
+        for (const answer of answers) {
+          const row = results.insertRow();
+          addCell(row, answer.name.replace(/\.$/, ""));
+          addCell(row, typeNames[answer.type] ?? `TYPE${answer.type}`);
+          addCell(row, String(answer.TTL));
+          addCell(row, answer.data);
+        }
+      }
+
+      const responseName = statusNames[data.Status] ?? `RCODE ${data.Status}`;
+      setStatus(`${responseName} · ${answers.length} 条记录`, data.Status === 0 ? "success" : "error");
+      flags.textContent = data.AD ? "DNSSEC 已验证" : "DNSSEC 未验证";
+    } catch (error) {
+      if (activeQuery !== controller) return;
+      results.innerHTML = '<tr class="placeholder-row"><td colspan="4">查询失败</td></tr>';
+      setStatus(
+        timedOut ? "查询超时" : error instanceof Error ? error.message : "查询失败",
+        "error",
+      );
+    } finally {
+      window.clearTimeout(timeout);
+      if (activeQuery === controller) activeQuery = undefined;
+    }
+  });
+</script>
+
+<style>
+  .tool-header {
+    margin-bottom: 42px;
+  }
+
+  .query-bar {
+    display: grid;
+    grid-template-columns: minmax(240px, 1fr) 150px auto;
+    align-items: end;
+    gap: 12px;
+    padding: 22px;
+    border-block: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .query-button {
+    height: 42px;
+  }
+
+  .result-header {
+    display: flex;
+    min-height: 68px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+  }
+
+  #dns-flags {
+    color: var(--faint);
+    font-size: 0.76rem;
+  }
+
+  .result-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+  }
+
+  .result-table {
+    width: 100%;
+    min-width: 680px;
+    border-collapse: collapse;
+    font-size: 0.84rem;
+  }
+
+  .result-table th,
+  .result-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .result-table th {
+    color: var(--muted);
+    background: var(--surface);
+    font-size: 0.75rem;
+    font-weight: 650;
+  }
+
+  .result-table td {
+    overflow-wrap: anywhere;
+    font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  }
+
+  .result-table tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .result-table :global(.placeholder-row td) {
+    height: 88px;
+    color: var(--faint);
+    font-family: inherit;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  @media (max-width: 680px) {
+    .query-bar {
+      grid-template-columns: minmax(0, 1fr) 112px;
+      padding: 16px;
+    }
+
+    .domain-field {
+      grid-column: 1 / -1;
+    }
+  }
+</style>

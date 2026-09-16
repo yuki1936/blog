@@ -1,0 +1,117 @@
+---
+import { Router } from "@lucide/astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="CIDR 子网计算器" description="计算 IPv4 CIDR 的网络地址、掩码与可用主机范围。" wide>
+  <header class="tool-header">
+    <p class="eyebrow">Tools / CIDR</p>
+    <h1>CIDR 子网计算器</h1>
+    <p class="lede">输入 IPv4 地址与前缀长度，得到网络地址、掩码与可用主机范围。</p>
+  </header>
+
+  <form id="cidr-form" class="cidr-bar">
+    <label class="field-label cidr-field">
+      CIDR
+      <input class="field" id="cidr-input" type="text" placeholder="192.168.1.10/24" spellcheck="false" required />
+    </label>
+    <button class="tool-button primary cidr-button" type="submit">计算</button>
+  </form>
+
+  <p id="cidr-status" class="status-line" aria-live="polite">等待输入</p>
+  <div id="cidr-results" class="cidr-results"></div>
+</BaseLayout>
+
+<script>
+  import { cidrInfo } from "../../lib/cidr";
+
+  const form = document.querySelector<HTMLFormElement>("#cidr-form");
+  const input = document.querySelector<HTMLInputElement>("#cidr-input");
+  const status = document.querySelector<HTMLElement>("#cidr-status");
+  const results = document.querySelector<HTMLElement>("#cidr-results");
+
+  const labels: [keyof ReturnType<typeof cidrInfo>, string][] = [
+    ["network", "网络地址"],
+    ["broadcast", "广播地址"],
+    ["netmask", "子网掩码"],
+    ["wildcard", "反掩码"],
+    ["firstHost", "第一个可用主机"],
+    ["lastHost", "最后一个可用主机"],
+    ["totalHosts", "可用主机数"],
+  ];
+
+  form?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!results || !input) return;
+    try {
+      const info = cidrInfo(input.value);
+      const rows = labels
+        .map(([key, label]) => {
+          const value = info[key];
+          return `<div class="cidr-row"><span class="cidr-label">${label}</span><code class="cidr-value">${value}</code></div>`;
+        })
+        .join("");
+      results.innerHTML = rows;
+      status!.textContent = `${info.input}（/${info.prefix}）计算完成`;
+      status!.dataset.state = "success";
+    } catch (error) {
+      results.replaceChildren();
+      status!.textContent = error instanceof Error ? error.message : "计算失败";
+      status!.dataset.state = "error";
+    }
+  });
+</script>
+
+<style>
+  .tool-header {
+    margin-bottom: 42px;
+  }
+
+  .cidr-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 12px;
+    padding: 22px;
+    border-block: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .cidr-button {
+    height: 42px;
+  }
+
+  .cidr-results {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .cidr-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  .cidr-label {
+    color: var(--muted);
+    font-size: 0.8rem;
+  }
+
+  .cidr-value {
+    color: var(--text);
+    font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+    font-size: 0.84rem;
+  }
+
+  @media (max-width: 640px) {
+    .cidr-bar {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

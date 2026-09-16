@@ -1,0 +1,136 @@
+---
+import { CodeXml, MessageSquare, Rss } from "@lucide/astro";
+import "../styles/global.css";
+import Header from "../components/Header.astro";
+
+interface Props {
+  title?: string;
+  description?: string;
+  wide?: boolean;
+  ogType?: "website" | "article";
+}
+
+const {
+  title,
+  description = "yuki1936 的文章、回忆与日常工具。",
+  wide = false,
+  ogType = "website",
+} = Astro.props;
+const pageTitle = title ? `${title} · neri` : "neri";
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site);
+const ogImage = new URL("/og-default.png", Astro.site);
+const rssUrl = new URL("rss.xml", Astro.site);
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="canonical" href={canonicalUrl} />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <link rel="alternate" type="application/rss+xml" title="neri" href={rssUrl} />
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content="neri" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="neri" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+    <title>{pageTitle}</title>
+    <script is:inline>
+      (function () {
+        var dark = false;
+        try {
+          var stored = localStorage.getItem("theme");
+          dark = stored
+            ? stored === "dark"
+            : window.matchMedia("(prefers-color-scheme: dark)").matches;
+        } catch (error) {}
+        document.documentElement.classList.toggle("dark", dark);
+        var meta = document.querySelector('meta[name="theme-color"]');
+        if (meta) meta.setAttribute("content", dark ? "#09090b" : "#ffffff");
+      })();
+    </script>
+  </head>
+  <body>
+    <Header />
+    <main class:list={["site-main", wide ? "shell" : "content-shell"]}>
+      <slot />
+    </main>
+    <footer class="site-footer shell">
+      <div class="footer-meta">
+        <span>© {new Date().getFullYear()} yuki1936</span>
+        <span>立春天，风渐暖，伊人一去不复返。</span>
+      </div>
+      <nav class="footer-links" aria-label="站内链接">
+        <a href="/rss.xml">
+          <Rss size={14} aria-hidden="true" />RSS
+        </a>
+        <a href="https://github.com/yuki1936">
+          <CodeXml size={14} aria-hidden="true" />GitHub
+        </a>
+        <a href="https://matrix.to/#/@yuki1936:matrix.org">
+          <MessageSquare size={14} aria-hidden="true" />Matrix
+        </a>
+      </nav>
+    </footer>
+  </body>
+</html>
+
+<style>
+  .site-footer {
+    display: flex;
+    min-height: 72px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--faint);
+    font-size: 0.78rem;
+  }
+
+  .footer-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 16px;
+  }
+
+  .footer-links a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--faint);
+    text-decoration: none;
+  }
+
+  .footer-links a:hover {
+    color: var(--text);
+  }
+
+  @media (max-width: 640px) {
+    .site-footer {
+      min-height: 92px;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 10px;
+    }
+  }
+</style>

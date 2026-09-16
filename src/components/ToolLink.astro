@@ -1,0 +1,73 @@
+---
+import { ArrowUpRight } from "@lucide/astro";
+
+interface Props {
+  href: string;
+  title: string;
+  description: string;
+  icon: any;
+}
+
+const { href, title, description, icon: Icon } = Astro.props;
+---
+
+<a class="tool-link" href={href}>
+  <span class="tool-icon"><Icon size={21} stroke-width={1.7} aria-hidden="true" /></span>
+  <span class="tool-copy">
+    <strong>{title}</strong>
+    <small>{description}</small>
+  </span>
+  <ArrowUpRight class="arrow" size={17} stroke-width={1.7} aria-hidden="true" />
+</a>
+
+<style>
+  .tool-link {
+    display: grid;
+    min-height: 110px;
+    grid-template-columns: 38px minmax(0, 1fr) 20px;
+    align-items: start;
+    gap: 14px;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    background: var(--surface);
+    text-decoration: none;
+  }
+
+  .tool-link:hover {
+    border-color: var(--border-strong);
+    color: var(--text);
+    background: var(--surface-raised);
+  }
+
+  .tool-icon {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--accent);
+    background: var(--bg);
+  }
+
+  .tool-copy {
+    display: grid;
+    gap: 5px;
+  }
+
+  .tool-copy strong {
+    line-height: 1.4;
+  }
+
+  .tool-copy small {
+    color: var(--muted);
+    font-size: 0.82rem;
+    line-height: 1.55;
+  }
+
+  .arrow {
+    color: var(--faint);
+  }
+</style>

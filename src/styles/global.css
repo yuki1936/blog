@@ -1,0 +1,393 @@
+:root {
+  color-scheme: light;
+  --bg: #ffffff;
+  --surface: #fafafa;
+  --surface-raised: #f4f4f5;
+  --text: #09090b;
+  --muted: #71717a;
+  --faint: #a1a1aa;
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+  --accent: #18181b;
+  --accent-strong: #09090b;
+  --warm: #3f3f46;
+  --danger: #dc2626;
+  --content: 720px;
+  --wide: 1080px;
+  --radius: 0.5rem;
+  font-family: system-ui, sans-serif;
+  font-synthesis: none;
+  background: var(--bg);
+  color: var(--text);
+}
+
+:root.dark {
+  color-scheme: dark;
+  --bg: #09090b;
+  --surface: #18181b;
+  --surface-raised: #27272a;
+  --text: #fafafa;
+  --muted: #a1a1aa;
+  --faint: #71717a;
+  --border: #27272a;
+  --border-strong: #3f3f46;
+  --accent: #e4e4e7;
+  --accent-strong: #fafafa;
+  --warm: #d4d4d8;
+  --danger: #f87171;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: var(--bg);
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  letter-spacing: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  letter-spacing: 0;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  color: inherit;
+  text-decoration-color: var(--border-strong);
+  text-underline-offset: 0.24em;
+}
+
+a:hover {
+  color: var(--accent-strong);
+  text-decoration-color: currentColor;
+}
+
+::selection {
+  color: var(--bg);
+  background: var(--accent);
+}
+
+.shell {
+  width: min(calc(100% - 40px), var(--wide));
+  margin-inline: auto;
+}
+
+.content-shell {
+  width: min(calc(100% - 40px), var(--content));
+  margin-inline: auto;
+}
+
+.site-main {
+  min-height: calc(100vh - 145px);
+  padding-block: 64px 96px;
+}
+
+.eyebrow {
+  margin: 0 0 10px;
+  color: var(--accent);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 0.78rem;
+  font-weight: 650;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3 {
+  margin-block: 0;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+h1 {
+  font-size: 3.5rem;
+  font-weight: 720;
+}
+
+h2 {
+  font-size: 1.25rem;
+}
+
+.lede {
+  max-width: 660px;
+  margin: 20px 0 0;
+  color: var(--muted);
+  font-size: 1.05rem;
+}
+
+.tool-header h1,
+.tools-header h1,
+.page-header h1,
+.about-layout h1 {
+  font-size: 1.5rem;
+  font-weight: 680;
+}
+
+.section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.section-heading a {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.empty-state {
+  margin: 0;
+  padding-block: 22px;
+  color: var(--muted);
+}
+
+.tool-button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: calc(var(--radius) - 2px);
+  color: var(--text);
+  background: var(--surface-raised);
+  cursor: pointer;
+}
+
+.tool-button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.tool-button.primary {
+  border-color: var(--accent);
+  color: var(--bg);
+  background: var(--accent);
+  font-weight: 700;
+}
+
+.tool-button.primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+
+.tool-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.field-label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.field,
+.select,
+.textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 2px);
+  outline: none;
+  color: var(--text);
+  background: var(--bg);
+}
+
+.field,
+.select {
+  height: 42px;
+  padding-inline: 12px;
+}
+
+.textarea {
+  min-height: 360px;
+  padding: 14px;
+  resize: vertical;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 0.88rem;
+  line-height: 1.6;
+  tab-size: 2;
+}
+
+.field:focus,
+.select:focus,
+.textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.status-line {
+  min-height: 24px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.status-line[data-state="error"] {
+  color: var(--danger);
+}
+
+.status-line[data-state="success"] {
+  color: var(--accent);
+}
+
+.prose {
+  color: var(--text);
+  font-size: 1.02rem;
+}
+
+.prose h2,
+.prose h3 {
+  margin-top: 2.4em;
+  scroll-margin-top: 88px;
+  color: var(--text);
+  transition: color 160ms ease;
+}
+
+.prose h2 {
+  padding-bottom: 0.4em;
+  border-bottom: 1px solid var(--border);
+  font-size: 1.45rem;
+}
+
+.prose h3 {
+  font-size: 1.15rem;
+}
+
+.prose h2:target,
+.prose h3:target {
+  color: var(--accent-strong);
+}
+
+.prose .heading-anchor {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.2em;
+  vertical-align: middle;
+  outline: none;
+  color: var(--faint);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 0.72em;
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  opacity: 0;
+  transition:
+    color 160ms ease,
+    opacity 160ms ease;
+}
+
+.prose h2:hover .heading-anchor,
+.prose h3:hover .heading-anchor,
+.prose .heading-anchor:focus-visible,
+.prose h2:target .heading-anchor,
+.prose h3:target .heading-anchor {
+  color: var(--accent);
+  opacity: 1;
+}
+
+.prose .heading-anchor:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.prose p,
+.prose ul,
+.prose ol,
+.prose blockquote {
+  margin-block: 1.25em;
+}
+
+.prose img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 80vh;
+  margin-inline: auto;
+  border-radius: 5px;
+}
+
+.prose code {
+  padding: 0.15em 0.35em;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--warm);
+  background: var(--surface);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.prose pre {
+  overflow-x: auto;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.prose pre code {
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+}
+
+.prose blockquote {
+  margin-inline: 0;
+  padding-left: 18px;
+  border-left: 3px solid var(--warm);
+  color: var(--muted);
+}
+
+@media (max-width: 640px) {
+  .shell,
+  .content-shell {
+    width: min(calc(100% - 28px), var(--wide));
+  }
+
+  .site-main {
+    padding-block: 42px 72px;
+  }
+
+  .textarea {
+    min-height: 280px;
+  }
+
+  h1 {
+    font-size: 2.25rem;
+  }
+
+  .prose .heading-anchor {
+    opacity: 0.7;
+  }
+}

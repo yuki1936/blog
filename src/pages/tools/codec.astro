@@ -1,0 +1,146 @@
+---
+import { KeyRound } from "@lucide/astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="编解码工具" description="Base64、URL 编解码与 JWT 解析，全部在本地完成。" wide>
+  <header class="tool-header">
+    <p class="eyebrow">Tools / Codec</p>
+    <h1>编解码工具</h1>
+    <p class="lede">Base64 与 URL 编解码、JWT 结构解析。全部在浏览器本地完成。</p>
+  </header>
+
+  <section class="codec-panel">
+    <h2>Base64</h2>
+    <label class="field-label">
+      输入
+      <textarea id="b64-input" class="codec-textarea textarea" placeholder="输入文本或 Base64" spellcheck="false"></textarea>
+    </label>
+    <div class="codec-actions">
+      <button class="tool-button" type="button" data-codec="b64-encode">编码</button>
+      <button class="tool-button" type="button" data-codec="b64-decode">解码</button>
+    </div>
+  </section>
+
+  <section class="codec-panel">
+    <h2>URL</h2>
+    <label class="field-label">
+      输入
+      <textarea id="url-input" class="codec-textarea textarea" placeholder="输入文本或已编码的 URL 片段" spellcheck="false"></textarea>
+    </label>
+    <div class="codec-actions">
+      <button class="tool-button" type="button" data-codec="url-encode">编码</button>
+      <button class="tool-button" type="button" data-codec="url-decode">解码</button>
+    </div>
+  </section>
+
+  <section class="codec-panel">
+    <h2>JWT</h2>
+    <label class="field-label">
+      Token
+      <textarea id="jwt-input" class="codec-textarea textarea" placeholder="eyJhbGciOi…" spellcheck="false"></textarea>
+    </label>
+    <div class="codec-actions">
+      <button class="tool-button primary" type="button" data-codec="jwt-decode">解析</button>
+    </div>
+    <p class="jwt-note">仅本地解析结构，不验证签名。</p>
+  </section>
+
+  <p id="codec-status" class="status-line" aria-live="polite">等待输入</p>
+  <label class="field-label output-label">
+    输出
+    <textarea id="codec-output" class="codec-textarea textarea" readonly></textarea>
+  </label>
+</BaseLayout>
+
+<script>
+  import { base64Decode, base64Encode, jwtDecode, urlDecode, urlEncode } from "../../lib/codec";
+
+  const status = document.querySelector<HTMLElement>("#codec-status");
+  const output = document.querySelector<HTMLTextAreaElement>("#codec-output");
+
+  function setStatus(message: string, state = "") {
+    if (!status) return;
+    status.textContent = message;
+    status.dataset.state = state;
+  }
+
+  function readInput(id: string): string {
+    return document.querySelector<HTMLTextAreaElement>(id)?.value ?? "";
+  }
+
+  document.addEventListener("click", (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-codec]");
+    if (!button) return;
+    const action = button.dataset.codec;
+    try {
+      if (action === "b64-encode") {
+        output!.value = base64Encode(readInput("#b64-input"));
+        setStatus("Base64 编码完成", "success");
+      } else if (action === "b64-decode") {
+        output!.value = base64Decode(readInput("#b64-input").trim());
+        setStatus("Base64 解码完成", "success");
+      } else if (action === "url-encode") {
+        output!.value = urlEncode(readInput("#url-input"));
+        setStatus("URL 编码完成", "success");
+      } else if (action === "url-decode") {
+        output!.value = urlDecode(readInput("#url-input"));
+        setStatus("URL 解码完成", "success");
+      } else if (action === "jwt-decode") {
+        const parts = jwtDecode(readInput("#jwt-input"));
+        output!.value = JSON.stringify(
+          { header: parts.header, payload: parts.payload, signature: parts.signature },
+          null,
+          2,
+        );
+        setStatus("JWT 解析完成", "success");
+      }
+    } catch (error) {
+      output!.value = "";
+      setStatus(error instanceof Error ? error.message : "处理失败", "error");
+    }
+  });
+</script>
+
+<style>
+  .tool-header {
+    margin-bottom: 42px;
+  }
+
+  .codec-panel {
+    padding: 22px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+
+  .codec-panel + .codec-panel {
+    margin-top: 14px;
+  }
+
+  .codec-panel h2 {
+    margin-bottom: 16px;
+    font-size: 1rem;
+    font-weight: 650;
+  }
+
+  .codec-textarea {
+    min-height: 120px;
+  }
+
+  .codec-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .jwt-note {
+    margin: 10px 0 0;
+    color: var(--faint);
+    font-size: 0.76rem;
+  }
+
+  .output-label {
+    margin-top: 18px;
+  }
+</style>

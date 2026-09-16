@@ -1,0 +1,117 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import {
+  categoryMeta,
+  formatDate,
+  getArticleCategory,
+  getArticleSlug,
+  sortArticles,
+  type Article,
+} from "../lib/articles";
+
+const articles = sortArticles(
+  await getCollection("articles", ({ data }) => !data.draft),
+);
+
+const byYear = new Map<number, Article[]>();
+for (const article of articles) {
+  const year = article.data.published.getFullYear();
+  const group = byYear.get(year) ?? [];
+  group.push(article);
+  byYear.set(year, group);
+}
+const years = [...byYear.keys()].sort((left, right) => right - left);
+---
+
+<BaseLayout title="归档" description="按年份归档的全部文章。" wide>
+  <header class="page-header">
+    <p class="eyebrow">Archive</p>
+    <h1>归档</h1>
+    <p class="lede">共 {articles.length} 篇文章。</p>
+  </header>
+
+  {
+    years.map((year) => (
+      <section class="year-section">
+        <h2>{year}</h2>
+        <ol class="year-list">
+          {byYear.get(year)!.map((article) => (
+            <li>
+              <a href={`/articles/${getArticleSlug(article)}/`}>
+                <time datetime={article.data.published.toISOString()}>
+                  {formatDate(article.data.published).slice(5)}
+                </time>
+                <span class="archive-title">{article.data.title}</span>
+                <span class="archive-category">{categoryMeta[getArticleCategory(article)].label}</span>
+              </a>
+            </li>
+          ))}
+        </ol>
+      </section>
+    ))
+  }
+</BaseLayout>
+
+<style>
+  .page-header {
+    margin-bottom: 42px;
+  }
+
+  .year-section + .year-section {
+    margin-top: 44px;
+  }
+
+  .year-section h2 {
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    font-size: 1.3rem;
+    font-weight: 700;
+  }
+
+  .year-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .year-list a {
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+    padding-block: 12px;
+    border-bottom: 1px solid var(--border);
+    text-decoration: none;
+  }
+
+  .year-list time {
+    flex: none;
+    color: var(--faint);
+    font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+    font-size: 0.76rem;
+  }
+
+  .archive-title {
+    color: var(--text);
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  .year-list a:hover .archive-title {
+    color: var(--accent-strong);
+  }
+
+  .archive-category {
+    flex: none;
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 0.76rem;
+  }
+
+  @media (max-width: 640px) {
+    .archive-category {
+      display: none;
+    }
+  }
+</style>

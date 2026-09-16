@@ -1,0 +1,789 @@
+---
+import {
+  ArrowLeftRight,
+  Clipboard,
+  Download,
+  Play,
+  Trash2,
+  Upload,
+} from "@lucide/astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="标记语言转换"
+  description="在 Markdown、HTML、Typst 与 LaTeX 之间进行本地转换。"
+  wide
+>
+  <header class="tool-header">
+    <p class="eyebrow">Tools / Markup Converter</p>
+    <h1>标记语言转换</h1>
+    <p class="lede">Markdown、HTML、Typst 与 LaTeX。</p>
+  </header>
+
+  <div class="format-toolbar">
+    <label class="field-label">
+      输入格式
+      <select class="select" id="source-format">
+        <option value="auto">自动识别</option>
+        <option value="markdown">Markdown</option>
+        <option value="html">HTML</option>
+        <option value="typst">Typst</option>
+        <option value="latex">LaTeX</option>
+      </select>
+    </label>
+    <button class="tool-button swap-button" id="swap-formats" type="button" title="交换格式" aria-label="交换输入与输出格式">
+      <ArrowLeftRight size={18} aria-hidden="true" />
+    </button>
+    <label class="field-label">
+      输出格式
+      <select class="select" id="target-format">
+        <option value="html">HTML</option>
+        <option value="markdown">Markdown</option>
+        <option value="typst">Typst</option>
+        <option value="latex">LaTeX</option>
+      </select>
+    </label>
+    <button class="tool-button primary convert-button" id="convert-document" type="button" disabled>
+      <Play size={17} aria-hidden="true" /> 转换
+    </button>
+  </div>
+
+  <details class="converter-options">
+    <summary>选项</summary>
+    <div class="options-grid">
+      <label class="field-label">
+        示例
+        <select class="select" id="example-input">
+          <option value="">选择示例</option>
+          <option value="markdown">Markdown</option>
+          <option value="html">HTML</option>
+          <option value="typst">Typst</option>
+          <option value="latex">LaTeX</option>
+        </select>
+      </label>
+      <label class="field-label">
+        链接前缀
+        <input class="field" id="link-prefix" type="text" placeholder="/docs" />
+      </label>
+      <label class="field-label">
+        图片前缀
+        <input class="field" id="image-prefix" type="text" placeholder="/assets" />
+      </label>
+      <label class="option-toggle"><input id="strict-mode" type="checkbox" /> 严格模式</label>
+      <label class="option-toggle"><input id="full-html" type="checkbox" /> 完整 HTML 文档</label>
+    </div>
+  </details>
+
+  <div class="converter-status">
+    <p id="convert-status" class="status-line" aria-live="polite">正在载入转换器…</p>
+    <span>markweft-rs / WebAssembly</span>
+  </div>
+  <div id="conversion-diagnostics" class="conversion-diagnostics" aria-live="polite" hidden></div>
+
+  <div class="editor-grid">
+    <section class="editor-panel" id="input-panel">
+      <div class="panel-header">
+        <label for="document-input">输入</label>
+        <label class="panel-action" for="document-file">
+          <Upload size={15} aria-hidden="true" /> 导入
+          <input
+            id="document-file"
+            type="file"
+            accept=".md,.markdown,.html,.htm,.typ,.typst,.tex,.latex,text/*"
+          />
+        </label>
+      </div>
+      <textarea
+        class="textarea document-editor"
+        id="document-input"
+        spellcheck="false"
+        placeholder="# Hello&#10;&#10;Start writing here…"></textarea>
+      <div class="editor-footer">
+        <span id="input-characters">0 字符</span>
+        <button id="clear-document" type="button">
+          <Trash2 size={14} aria-hidden="true" /> 清空
+        </button>
+      </div>
+    </section>
+
+    <section class="editor-panel">
+      <div class="panel-header">
+        <div class="view-tabs" role="tablist" aria-label="输出视图">
+          <button
+            class="view-tab active"
+            id="source-view-tab"
+            type="button"
+            role="tab"
+            aria-controls="document-output"
+            aria-selected="true"
+            tabindex="0"
+          >源码</button>
+          <button
+            class="view-tab"
+            id="preview-view-tab"
+            type="button"
+            role="tab"
+            aria-controls="document-preview"
+            aria-selected="false"
+            tabindex="-1"
+            disabled
+          >预览</button>
+          <button
+            class="view-tab"
+            id="ast-view-tab"
+            type="button"
+            role="tab"
+            aria-controls="document-ast"
+            aria-selected="false"
+            tabindex="-1"
+            disabled
+          >AST</button>
+        </div>
+        <div class="panel-actions">
+          <button id="copy-document" type="button" disabled>
+            <Clipboard size={15} aria-hidden="true" /> 复制
+          </button>
+          <button id="download-document" type="button" disabled>
+            <Download size={15} aria-hidden="true" /> 下载
+          </button>
+        </div>
+      </div>
+      <textarea
+        class="textarea document-editor"
+        id="document-output"
+        role="tabpanel"
+        aria-labelledby="source-view-tab"
+        spellcheck="false"
+        readonly
+        placeholder="转换结果"></textarea>
+      <iframe
+        class="document-preview"
+        id="document-preview"
+        role="tabpanel"
+        aria-labelledby="preview-view-tab"
+        title="转换结果预览"
+        sandbox=""
+        hidden></iframe>
+      <textarea
+        class="textarea document-editor"
+        id="document-ast"
+        role="tabpanel"
+        aria-labelledby="ast-view-tab"
+        spellcheck="false"
+        readonly
+        hidden></textarea>
+      <div class="editor-footer">
+        <span id="output-characters">0 字符</span>
+        <span id="detected-format"></span>
+      </div>
+    </section>
+  </div>
+</BaseLayout>
+
+<script>
+  import {
+    CONVERSION_TIMEOUT_MS,
+    MAX_DOCUMENT_BYTES,
+    createPreviewDocument,
+    diagnosticLabel,
+    formatExamples,
+    formatExtensions,
+    formatFromFilename,
+    formatLabels,
+    formatMimeTypes,
+    type ConversionDiagnostic,
+    type FormatName,
+    type MarkweftWorkerResponse,
+  } from "../../lib/markup-converter";
+
+  type OutputView = "source" | "preview" | "ast";
+
+  const sourceFormat = document.querySelector<HTMLSelectElement>("#source-format");
+  const targetFormat = document.querySelector<HTMLSelectElement>("#target-format");
+  const input = document.querySelector<HTMLTextAreaElement>("#document-input");
+  const output = document.querySelector<HTMLTextAreaElement>("#document-output");
+  const preview = document.querySelector<HTMLIFrameElement>("#document-preview");
+  const astOutput = document.querySelector<HTMLTextAreaElement>("#document-ast");
+  const sourceViewTab = document.querySelector<HTMLButtonElement>("#source-view-tab");
+  const previewViewTab = document.querySelector<HTMLButtonElement>("#preview-view-tab");
+  const astViewTab = document.querySelector<HTMLButtonElement>("#ast-view-tab");
+  const status = document.querySelector<HTMLElement>("#convert-status");
+  const detected = document.querySelector<HTMLElement>("#detected-format");
+  const inputCharacters = document.querySelector<HTMLElement>("#input-characters");
+  const outputCharacters = document.querySelector<HTMLElement>("#output-characters");
+  const convertButton = document.querySelector<HTMLButtonElement>("#convert-document");
+  const copyButton = document.querySelector<HTMLButtonElement>("#copy-document");
+  const downloadButton = document.querySelector<HTMLButtonElement>("#download-document");
+  const fileInput = document.querySelector<HTMLInputElement>("#document-file");
+  const inputPanel = document.querySelector<HTMLElement>("#input-panel");
+  const diagnostics = document.querySelector<HTMLElement>("#conversion-diagnostics");
+  const exampleInput = document.querySelector<HTMLSelectElement>("#example-input");
+  const strictMode = document.querySelector<HTMLInputElement>("#strict-mode");
+  const fullHtml = document.querySelector<HTMLInputElement>("#full-html");
+  const linkPrefix = document.querySelector<HTMLInputElement>("#link-prefix");
+  const imagePrefix = document.querySelector<HTMLInputElement>("#image-prefix");
+
+  let worker: Worker;
+  let ready = false;
+  let requestId = 0;
+  let lastDetected: FormatName | undefined;
+  let currentView: OutputView = "source";
+  let converting = false;
+  let conversionTimer: number | undefined;
+  let preserveStatusOnReady = false;
+
+  function setOutputView(view: OutputView) {
+    const showPreview = view === "preview" && !previewViewTab?.disabled;
+    const showAst = view === "ast" && !astViewTab?.disabled;
+    currentView = showPreview ? "preview" : showAst ? "ast" : "source";
+    if (output) output.hidden = showPreview || showAst;
+    if (preview) preview.hidden = !showPreview;
+    if (astOutput) astOutput.hidden = !showAst;
+    sourceViewTab?.classList.toggle("active", !showPreview && !showAst);
+    previewViewTab?.classList.toggle("active", showPreview);
+    astViewTab?.classList.toggle("active", showAst);
+    sourceViewTab?.setAttribute("aria-selected", String(!showPreview && !showAst));
+    previewViewTab?.setAttribute("aria-selected", String(showPreview));
+    astViewTab?.setAttribute("aria-selected", String(showAst));
+    if (sourceViewTab) sourceViewTab.tabIndex = showPreview || showAst ? -1 : 0;
+    if (previewViewTab) previewViewTab.tabIndex = showPreview ? 0 : -1;
+    if (astViewTab) astViewTab.tabIndex = showAst ? 0 : -1;
+    const length = showAst ? (astOutput?.value.length ?? 0) : (output?.value.length ?? 0);
+    if (outputCharacters) outputCharacters.textContent = `${length.toLocaleString()} 字符`;
+  }
+
+  function setStatus(message: string, state = "") {
+    if (!status) return;
+    status.textContent = message;
+    status.dataset.state = state;
+  }
+
+  function setDiagnostics(items: ConversionDiagnostic[]) {
+    if (!diagnostics) return;
+    diagnostics.replaceChildren();
+    diagnostics.hidden = items.length === 0;
+    for (const item of items) {
+      const line = item.line ? `（${item.line}:${item.column ?? 1}）` : "";
+      const paragraph = document.createElement("p");
+      paragraph.dataset.severity = item.severity;
+      paragraph.textContent = `${line}${diagnosticLabel(item.code, item.message)}`;
+      diagnostics.append(paragraph);
+    }
+  }
+
+  function setOutput(value: string, previewHtml = "", astJson = "", detectedFormat?: FormatName, confidence?: number, warnings: ConversionDiagnostic[] = []) {
+    if (output) output.value = value;
+    if (astOutput) astOutput.value = astJson;
+    if (preview) preview.srcdoc = previewHtml ? createPreviewDocument(previewHtml) : "";
+    if (previewViewTab) previewViewTab.disabled = !previewHtml;
+    if (astViewTab) astViewTab.disabled = !astJson;
+    if (outputCharacters) outputCharacters.textContent = `${value.length.toLocaleString()} 字符`;
+    if (copyButton) copyButton.disabled = !value;
+    if (downloadButton) downloadButton.disabled = !value;
+    if (detected) {
+      detected.textContent = detectedFormat
+        ? `识别为 ${formatLabels[detectedFormat]}${confidence === undefined ? "" : ` · ${Math.round(confidence * 100)}%`}`
+        : "";
+    }
+    setDiagnostics(warnings);
+    if (!value) setOutputView("source");
+  }
+
+  function updateInputStats() {
+    const length = input?.value.length ?? 0;
+    if (inputCharacters) inputCharacters.textContent = `${length.toLocaleString()} 字符`;
+  }
+
+  function invalidateOutput() {
+    requestId += 1;
+    if (converting) restartWorker(true);
+    lastDetected = undefined;
+    setOutput("");
+    if (convertButton) convertButton.disabled = !ready;
+    setStatus(ready ? "内容已修改，请重新转换" : "正在载入转换器…");
+  }
+
+  function requestConversion() {
+    const source = input?.value ?? "";
+    if (!source.trim()) return setStatus("请输入需要转换的内容", "error");
+    if (new Blob([source]).size > MAX_DOCUMENT_BYTES) return setStatus("文档不能超过 5 MiB", "error");
+    if (!ready || !sourceFormat || !targetFormat || !convertButton) return;
+
+    requestId += 1;
+    converting = true;
+    convertButton.disabled = true;
+    setStatus("正在转换…");
+    window.clearTimeout(conversionTimer);
+    const activeRequest = requestId;
+    conversionTimer = window.setTimeout(() => {
+      if (!converting || activeRequest !== requestId) return;
+      converting = false;
+      restartWorker(true);
+      setStatus("转换超时，请缩小文档后重试", "error");
+    }, CONVERSION_TIMEOUT_MS);
+    worker.postMessage({
+      type: "convert",
+      id: requestId,
+      source,
+      from: sourceFormat.value,
+      to: targetFormat.value,
+      options: {
+        mode: strictMode?.checked ? "strict" : "compatible",
+        full_html_document: fullHtml?.checked && targetFormat.value === "html",
+        link_prefix: linkPrefix?.value.trim() || undefined,
+        image_prefix: imagePrefix?.value.trim() || undefined,
+      },
+    });
+  }
+
+  function handleWorkerMessage({ data }: MessageEvent<MarkweftWorkerResponse>) {
+    if (data.type === "ready") {
+      ready = true;
+      if (convertButton) convertButton.disabled = false;
+      if (!preserveStatusOnReady) setStatus("转换器已就绪", "success");
+      preserveStatusOnReady = false;
+      return;
+    }
+    if (data.type === "result" && data.id === requestId) {
+      converting = false;
+      window.clearTimeout(conversionTimer);
+      lastDetected = data.detectedFormat;
+      setOutput(data.output, data.previewHtml, data.astJson, data.detectedFormat, data.confidence, data.diagnostics);
+      if (convertButton) convertButton.disabled = false;
+      setStatus("转换完成", "success");
+      return;
+    }
+    if (data.type === "error" && (data.id === undefined || data.id === requestId)) {
+      converting = false;
+      window.clearTimeout(conversionTimer);
+      if (convertButton) convertButton.disabled = !ready;
+      setStatus(data.message || "转换失败", "error");
+    }
+  }
+
+  function handleWorkerError() {
+    converting = false;
+    window.clearTimeout(conversionTimer);
+    if (convertButton) convertButton.disabled = true;
+    setStatus("无法载入转换器", "error");
+  }
+
+  function restartWorker(preserveStatus = false) {
+    worker?.terminate();
+    ready = false;
+    converting = false;
+    preserveStatusOnReady = preserveStatus;
+    worker = new Worker(new URL("../../workers/markweft.worker.ts", import.meta.url), { type: "module" });
+    worker.addEventListener("message", handleWorkerMessage);
+    worker.addEventListener("error", handleWorkerError);
+    worker.postMessage({ type: "init" });
+  }
+
+  restartWorker();
+
+  document.querySelector("#convert-document")?.addEventListener("click", requestConversion);
+  sourceViewTab?.addEventListener("click", () => setOutputView("source"));
+  previewViewTab?.addEventListener("click", () => setOutputView("preview"));
+  astViewTab?.addEventListener("click", () => setOutputView("ast"));
+  document.querySelector(".view-tabs")?.addEventListener("keydown", (event) => {
+    if (!(event instanceof KeyboardEvent) || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+    event.preventDefault();
+    const available: OutputView[] = ["source"];
+    if (!previewViewTab?.disabled) available.push("preview");
+    if (!astViewTab?.disabled) available.push("ast");
+    const current = Math.max(0, available.indexOf(currentView));
+    const direction = event.key === "ArrowRight" ? 1 : -1;
+    const view = available[(current + direction + available.length) % available.length];
+    setOutputView(view);
+    (view === "preview" ? previewViewTab : view === "ast" ? astViewTab : sourceViewTab)?.focus();
+  });
+  input?.addEventListener("input", () => {
+    updateInputStats();
+    invalidateOutput();
+  });
+  sourceFormat?.addEventListener("change", invalidateOutput);
+  targetFormat?.addEventListener("change", () => {
+    if (fullHtml) {
+      fullHtml.disabled = targetFormat.value !== "html";
+      if (fullHtml.disabled) fullHtml.checked = false;
+    }
+    invalidateOutput();
+  });
+  for (const option of [strictMode, fullHtml, linkPrefix, imagePrefix]) {
+    option?.addEventListener("change", invalidateOutput);
+  }
+  input?.addEventListener("keydown", (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") requestConversion();
+  });
+
+  document.querySelector("#swap-formats")?.addEventListener("click", () => {
+    if (!sourceFormat || !targetFormat) return;
+    const previousSource = sourceFormat.value === "auto"
+      ? (lastDetected ?? "markdown")
+      : sourceFormat.value;
+    sourceFormat.value = targetFormat.value;
+    targetFormat.value = previousSource;
+    if (output?.value && input) {
+      input.value = output.value;
+      updateInputStats();
+      setOutput("");
+    }
+    setStatus("格式已交换");
+  });
+
+  document.querySelector("#clear-document")?.addEventListener("click", () => {
+    if (input) input.value = "";
+    lastDetected = undefined;
+    updateInputStats();
+    setOutput("");
+    setStatus(ready ? "转换器已就绪" : "正在载入转换器…", ready ? "success" : "");
+    input?.focus();
+  });
+
+  async function loadFile(file?: File) {
+    if (!file || !input) return;
+    if (file.size > MAX_DOCUMENT_BYTES) {
+      setStatus("文件不能超过 5 MiB", "error");
+      return;
+    }
+    try {
+      input.value = await file.text();
+      const format = formatFromFilename(file.name);
+      if (format && sourceFormat) sourceFormat.value = format;
+      updateInputStats();
+      invalidateOutput();
+      setStatus(`${file.name} 已导入`, "success");
+    } catch {
+      setStatus("无法读取这个文件", "error");
+    }
+  }
+
+  fileInput?.addEventListener("change", async () => {
+    await loadFile(fileInput.files?.[0]);
+    fileInput.value = "";
+  });
+
+  for (const eventName of ["dragenter", "dragover"]) {
+    inputPanel?.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      inputPanel.classList.add("dragging");
+    });
+  }
+  for (const eventName of ["dragleave", "drop"]) {
+    inputPanel?.addEventListener(eventName, (event) => {
+      event.preventDefault();
+      inputPanel.classList.remove("dragging");
+    });
+  }
+  inputPanel?.addEventListener("drop", (event) => loadFile(event.dataTransfer?.files[0]));
+
+  exampleInput?.addEventListener("change", () => {
+    const format = exampleInput.value as FormatName;
+    if (!formatExamples[format] || !input || !sourceFormat) return;
+    input.value = formatExamples[format];
+    sourceFormat.value = format;
+    updateInputStats();
+    invalidateOutput();
+  });
+
+  copyButton?.addEventListener("click", async () => {
+    const value = currentView === "ast" ? astOutput?.value : output?.value;
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setStatus("输出已复制", "success");
+    } catch {
+      setStatus("浏览器拒绝了剪贴板访问", "error");
+    }
+  });
+
+  downloadButton?.addEventListener("click", () => {
+    const value = currentView === "ast" ? astOutput?.value : output?.value;
+    if (!value || !targetFormat) return;
+    const format = targetFormat.value as FormatName;
+    const isAst = currentView === "ast";
+    const url = URL.createObjectURL(new Blob([value], { type: isAst ? "application/json;charset=utf-8" : formatMimeTypes[format] }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = isAst ? "document.ast.json" : `converted.${formatExtensions[format]}`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    setStatus("下载已开始", "success");
+  });
+
+  updateInputStats();
+</script>
+
+<style>
+  .tool-header {
+    margin-bottom: 34px;
+  }
+
+  .format-toolbar {
+    display: grid;
+    grid-template-columns: minmax(160px, 1fr) 42px minmax(160px, 1fr) auto;
+    align-items: end;
+    gap: 10px;
+    padding: 18px;
+    border-block: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .converter-options {
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .converter-options summary {
+    width: fit-content;
+    padding: 10px 18px;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.76rem;
+  }
+
+  .options-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(140px, 1fr)) auto auto;
+    align-items: end;
+    gap: 10px;
+    padding: 4px 18px 16px;
+  }
+
+  .option-toggle {
+    display: inline-flex;
+    min-height: 42px;
+    align-items: center;
+    gap: 7px;
+    color: var(--muted);
+    font-size: 0.76rem;
+    white-space: nowrap;
+  }
+
+  .swap-button {
+    width: 42px;
+    padding: 0;
+  }
+
+  .convert-button {
+    height: 42px;
+  }
+
+  .converter-status {
+    display: flex;
+    min-height: 58px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+  }
+
+  .converter-status span {
+    color: var(--faint);
+    font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+    font-size: 0.7rem;
+  }
+
+  .conversion-diagnostics {
+    margin: -4px 0 14px;
+    padding: 9px 12px;
+    border-left: 2px solid var(--border-strong);
+    color: var(--muted);
+    background: var(--surface);
+    font-size: 0.74rem;
+  }
+
+  .conversion-diagnostics p {
+    margin: 0;
+  }
+
+  .conversion-diagnostics p + p {
+    margin-top: 4px;
+  }
+
+  .editor-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .editor-panel {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+  }
+
+  #input-panel.dragging {
+    border-color: var(--accent);
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+
+  .panel-header,
+  .editor-footer {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-inline: 13px;
+    color: var(--muted);
+    font-size: 0.76rem;
+  }
+
+  .panel-header {
+    border-bottom: 1px solid var(--border);
+    font-weight: 650;
+  }
+
+  .editor-footer {
+    min-height: 38px;
+    border-top: 1px solid var(--border);
+    color: var(--faint);
+    font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+    font-size: 0.68rem;
+  }
+
+  .panel-actions,
+  .view-tabs,
+  .panel-action,
+  .panel-header button,
+  .editor-footer button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .panel-actions {
+    gap: 4px;
+  }
+
+  .view-tabs {
+    gap: 2px;
+  }
+
+  .view-tab.active {
+    color: var(--text);
+    background: var(--surface-raised);
+  }
+
+  .panel-action,
+  .panel-header button,
+  .editor-footer button {
+    padding: 5px 7px;
+    border: 0;
+    border-radius: 4px;
+    color: var(--muted);
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+  }
+
+  .panel-action:hover,
+  .panel-header button:hover:not(:disabled),
+  .editor-footer button:hover {
+    color: var(--text);
+    background: var(--surface-raised);
+  }
+
+  .panel-header button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+  }
+
+  .panel-action input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  .document-editor {
+    display: block;
+    min-height: 520px;
+    border: 0;
+    border-radius: 0;
+    background: var(--bg);
+    resize: vertical;
+  }
+
+  .document-editor[hidden] {
+    display: none;
+  }
+
+  .document-editor:focus {
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+
+  #document-output {
+    color: var(--text);
+  }
+
+  .document-preview {
+    display: block;
+    width: 100%;
+    min-height: 520px;
+    border: 0;
+    background: #ffffff;
+  }
+
+  .document-preview[hidden] {
+    display: none;
+  }
+
+  @media (max-width: 760px) {
+    .format-toolbar {
+      grid-template-columns: minmax(0, 1fr) 42px minmax(0, 1fr);
+      padding: 14px;
+    }
+
+    .convert-button {
+      grid-column: 1 / -1;
+    }
+
+    .options-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      padding-inline: 14px;
+    }
+
+    .editor-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .document-editor {
+      min-height: 340px;
+    }
+
+    .document-preview {
+      min-height: 340px;
+    }
+  }
+
+  @media (max-width: 440px) {
+    .format-toolbar {
+      grid-template-columns: minmax(0, 1fr) 38px minmax(0, 1fr);
+      gap: 7px;
+      padding-inline: 10px;
+    }
+
+    .swap-button {
+      width: 38px;
+    }
+
+    .converter-status {
+      align-items: flex-start;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0;
+    }
+
+    .options-grid {
+      grid-template-columns: 1fr;
+      padding-inline: 10px;
+    }
+  }
+</style>

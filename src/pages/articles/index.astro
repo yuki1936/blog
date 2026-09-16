@@ -1,0 +1,51 @@
+---
+import { getCollection } from "astro:content";
+import ArticleList from "../../components/ArticleList.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { categoryMeta, sortArticles } from "../../lib/articles";
+
+const articles = sortArticles(
+  await getCollection("articles", ({ data }) => !data.draft),
+);
+---
+
+<BaseLayout title="文章" description="日常记录、回忆与技术文章。" wide>
+  <header class="page-header">
+    <p class="eyebrow">Articles</p>
+    <h1>文章</h1>
+    <p class="lede">日常记录、回忆与技术实践。</p>
+    <nav class="category-nav" aria-label="文章分类">
+      <a class="active" href="/articles/">全部</a>
+      <a href="/articles/life/">{categoryMeta.life.label}</a>
+      <a href="/articles/tech/">{categoryMeta.tech.label}</a>
+      <a href="/archives/">归档</a>
+    </nav>
+  </header>
+  <ArticleList articles={articles} />
+</BaseLayout>
+
+<style>
+  .page-header {
+    margin-bottom: 42px;
+  }
+
+  .category-nav {
+    display: flex;
+    gap: 6px;
+    margin-top: 28px;
+  }
+
+  .category-nav a {
+    padding: 6px 11px;
+    border-radius: 4px;
+    color: var(--muted);
+    font-size: 0.84rem;
+    text-decoration: none;
+  }
+
+  .category-nav a:hover,
+  .category-nav a.active {
+    color: var(--text);
+    background: var(--surface-raised);
+  }
+</style>

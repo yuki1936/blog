@@ -1,0 +1,183 @@
+---
+import { Clock } from "@lucide/astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="时间戳与 Cron" description="时间戳互转与 Cron 表达式中文解析。" wide>
+  <header class="tool-header">
+    <p class="eyebrow">Tools / Time &amp; Cron</p>
+    <h1>时间戳与 Cron</h1>
+    <p class="lede">时间戳与日期互转、Cron 表达式中文释义。</p>
+  </header>
+
+  <section class="time-panel">
+    <h2>时间戳</h2>
+    <p class="now-line">
+      当前 Unix 时间戳（秒）：<code id="now-ts">-</code>
+      <button class="tool-button copy-now" type="button">复制</button>
+    </p>
+    <label class="field-label">
+      输入时间戳（10 位秒或 13 位毫秒）
+      <input class="field" id="ts-input" type="text" inputmode="numeric" placeholder="1757894400" spellcheck="false" />
+    </label>
+    <div id="ts-results" class="ts-results"></div>
+  </section>
+
+  <section class="time-panel">
+    <h2>Cron 表达式</h2>
+    <form id="cron-form">
+      <label class="field-label">
+        表达式（分 时 日 月 星期）
+        <input class="field cron-input" id="cron-input" type="text" placeholder="*/5 * * * *" spellcheck="false" required />
+      </label>
+      <button class="tool-button primary cron-button" type="submit">解析</button>
+    </form>
+    <p id="cron-status" class="status-line" aria-live="polite">等待输入</p>
+  </section>
+</BaseLayout>
+
+<script>
+  import { describeCron } from "../../lib/cron";
+  import { formatDateTime, parseTimestamp } from "../../lib/time";
+
+  const nowTs = document.querySelector<HTMLElement>("#now-ts");
+  const copyButton = document.querySelector<HTMLButtonElement>(".copy-now");
+  const tsInput = document.querySelector<HTMLInputElement>("#ts-input");
+  const tsResults = document.querySelector<HTMLElement>("#ts-results");
+  const cronForm = document.querySelector<HTMLFormElement>("#cron-form");
+  const cronInput = document.querySelector<HTMLInputElement>("#cron-input");
+  const cronStatus = document.querySelector<HTMLElement>("#cron-status");
+
+  function tick() {
+    if (nowTs) nowTs.textContent = String(Math.floor(Date.now() / 1000));
+  }
+  tick();
+  window.setInterval(tick, 1000);
+
+  copyButton?.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(nowTs?.textContent ?? "");
+      copyButton.textContent = "已复制";
+      window.setTimeout(() => (copyButton.textContent = "复制"), 1200);
+    } catch {
+      // 剪贴板不可用时静默
+    }
+  });
+
+  function renderTimestamp(value: string) {
+    if (!tsResults) return;
+    const ms = parseTimestamp(value);
+    if (ms === null) {
+      tsResults.innerHTML = '<p class="status-line" data-state="error">应为 10 位秒或 13 位毫秒的数字</p>';
+      return;
+    }
+    tsResults.innerHTML = `
+      <div class="ts-row"><span>本地时间</span><code>${formatDateTime(ms, Intl.DateTimeFormat().resolvedOptions().timeZone)}</code></div>
+      <div class="ts-row"><span>UTC</span><code>${formatDateTime(ms, "UTC")}</code></div>
+      <div class="ts-row"><span>毫秒</span><code>${ms}</code></div>`;
+  }
+
+  tsInput?.addEventListener("input", () => renderTimestamp(tsInput.value));
+
+  cronForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!cronInput || !cronStatus) return;
+    try {
+      cronStatus.textContent = describeCron(cronInput.value);
+      cronStatus.dataset.state = "success";
+    } catch (error) {
+      cronStatus.textContent = error instanceof Error ? error.message : "解析失败";
+      cronStatus.dataset.state = "error";
+    }
+  });
+</script>
+
+<style>
+  .tool-header {
+    margin-bottom: 42px;
+  }
+
+  .time-panel {
+    padding: 22px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+
+  .time-panel + .time-panel {
+    margin-top: 14px;
+  }
+
+  .time-panel h2 {
+    margin-bottom: 16px;
+    font-size: 1rem;
+    font-weight: 650;
+  }
+
+  .now-line {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 16px;
+    color: var(--muted);
+    font-size: 0.86rem;
+  }
+
+  .now-line code {
+    color: var(--text);
+    font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+    font-size: 0.86rem;
+  }
+
+  .copy-now {
+    min-height: 30px;
+    padding: 3px 10px;
+    font-size: 0.76rem;
+  }
+
+  .ts-results {
+    display: grid;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  .ts-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.84rem;
+  }
+
+  .ts-row span {
+    color: var(--muted);
+  }
+
+  .ts-row code {
+    font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  }
+
+  #cron-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 12px;
+  }
+
+  #cron-form .cron-button {
+    height: 42px;
+  }
+
+  #cron-status {
+    margin-top: 16px;
+  }
+
+  @media (max-width: 640px) {
+    #cron-form {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

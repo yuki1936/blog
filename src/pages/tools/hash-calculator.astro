@@ -1,0 +1,158 @@
+---
+import { Hash } from "@lucide/astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="哈希计算器" description="在本地计算文本或文件的 SHA 系列哈希。" wide>
+  <header class="tool-header">
+    <p class="eyebrow">Tools / Hash</p>
+    <h1>哈希计算器</h1>
+    <p class="lede">输入文本或选择文件，同时得到四种 SHA 摘要。全部在浏览器本地计算。</p>
+  </header>
+
+  <div class="hash-inputs">
+    <label class="field-label">
+      文本
+      <textarea id="hash-text" class="textarea hash-textarea" placeholder="输入要计算哈希的内容" spellcheck="false"></textarea>
+    </label>
+    <label class="field-label">
+      或选择文件（最大 25 MiB）
+      <input id="hash-file" class="field" type="file" />
+    </label>
+  </div>
+
+  <p id="hash-status" class="status-line" aria-live="polite">等待输入</p>
+  <div id="hash-results" class="hash-results"></div>
+</BaseLayout>
+
+<script>
+  import { digestHex, encodeText, hashAlgorithms } from "../../lib/hash";
+
+  const MAX_FILE_BYTES = 25 * 1024 * 1024;
+  const textInput = document.querySelector<HTMLTextAreaElement>("#hash-text");
+  const fileInput = document.querySelector<HTMLInputElement>("#hash-file");
+  const status = document.querySelector<HTMLElement>("#hash-status");
+  const results = document.querySelector<HTMLElement>("#hash-results");
+
+  function setStatus(message: string, state = "") {
+    if (!status) return;
+    status.textContent = message;
+    status.dataset.state = state;
+  }
+
+  async function renderHashes(data: Uint8Array, label: string) {
+    if (!results) return;
+    setStatus(`正在计算 ${label} 的哈希…`);
+    const rows = await Promise.all(
+      hashAlgorithms.map(async (algorithm) => {
+        const hex = await digestHex(algorithm, data);
+        return `<div class="hash-row"><span class="hash-name">${algorithm}</span><code class="hash-value">${hex}</code><button class="tool-button hash-copy" type="button" data-hash="${hex}">复制</button></div>`;
+      }),
+    );
+    results.innerHTML = rows.join("");
+    setStatus(`${label}的哈希已就绪`, "success");
+  }
+
+  let renderTimer: number | undefined;
+  textInput?.addEventListener("input", () => {
+    window.clearTimeout(renderTimer);
+    renderTimer = window.setTimeout(() => {
+      const text = textInput.value;
+      if (fileInput) fileInput.value = "";
+      if (text.length === 0) {
+        results?.replaceChildren();
+        setStatus("等待输入");
+        return;
+      }
+      void renderHashes(encodeText(text), "文本");
+    }, 200);
+  });
+
+  fileInput?.addEventListener("change", async () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    if (textInput) textInput.value = "";
+    if (file.size > MAX_FILE_BYTES) {
+      setStatus("文件不能超过 25 MiB", "error");
+      return;
+    }
+    const buffer = new Uint8Array(await file.arrayBuffer());
+    await renderHashes(buffer, `文件 ${file.name}`);
+  });
+
+  results?.addEventListener("click", async (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".hash-copy");
+    if (!button) return;
+    try {
+      await navigator.clipboard.writeText(button.dataset.hash ?? "");
+      button.textContent = "已复制";
+      window.setTimeout(() => (button.textContent = "复制"), 1200);
+    } catch {
+      setStatus("复制失败，请手动选择复制", "error");
+    }
+  });
+</script>
+
+<style>
+  .tool-header {
+    margin-bottom: 42px;
+  }
+
+  .hash-inputs {
+    display: grid;
+    gap: 18px;
+    padding: 22px;
+    border-block: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .hash-textarea {
+    min-height: 160px;
+  }
+
+  .hash-results {
+    display: grid;
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .hash-row {
+    display: grid;
+    grid-template-columns: 90px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
+  .hash-name {
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 650;
+  }
+
+  .hash-value {
+    overflow-wrap: anywhere;
+    color: var(--text);
+    font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+    font-size: 0.8rem;
+  }
+
+  .hash-copy {
+    min-height: 34px;
+    padding: 5px 12px;
+    font-size: 0.8rem;
+  }
+
+  @media (max-width: 640px) {
+    .hash-row {
+      grid-template-columns: 74px minmax(0, 1fr);
+    }
+
+    .hash-copy {
+      grid-column: 1 / -1;
+      justify-self: end;
+    }
+  }
+</style>

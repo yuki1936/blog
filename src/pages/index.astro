@@ -1,0 +1,148 @@
+---
+import { getCollection } from "astro:content";
+import { Braces, CodeXml, FileOutput, Image as ImageIcon, Network, Rss } from "@lucide/astro";
+import ArticleList from "../components/ArticleList.astro";
+import ToolLink from "../components/ToolLink.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { sortArticles } from "../lib/articles";
+
+const articles = sortArticles(
+  await getCollection("articles", ({ data }) => !data.draft),
+).slice(0, 5);
+---
+
+<BaseLayout wide>
+  <section class="hero">
+    <img class="hero-avatar" src="/avatar.jpg" alt="yuki1936 的头像" width="96" height="96" />
+    <div class="hero-copy">
+      <h1>yuki1936</h1>
+      <p class="lede">One day, we'll all become a memory of someone else's.</p>
+      <div class="hero-links">
+        <a href="https://github.com/yuki1936">
+          <CodeXml size={17} aria-hidden="true" /> GitHub
+        </a>
+        <a href="/rss.xml">
+          <Rss size={17} aria-hidden="true" /> RSS
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-section">
+    <div class="section-heading">
+      <h2>最近文章</h2>
+      <a href="/articles/">全部 →</a>
+    </div>
+    <ArticleList articles={articles} />
+  </section>
+
+  <section class="home-section">
+    <div class="section-heading">
+      <h2>常用工具</h2>
+      <a href="/tools/">全部 →</a>
+    </div>
+    <div class="tool-grid">
+      <ToolLink
+        href="/tools/dns-lookup/"
+        title="DNS 查询"
+        description="通过 DNS-over-HTTPS 查询常见记录。"
+        icon={Network}
+      />
+      <ToolLink
+        href="/tools/json-viewer/"
+        title="JSON Viewer"
+        description="查看 JSON 树并生成 Rust 或 Go 类型。"
+        icon={Braces}
+      />
+      <ToolLink
+        href="/tools/image-processor/"
+        title="图片处理"
+        description="在本地裁切、缩放和压缩图片。"
+        icon={ImageIcon}
+      />
+      <ToolLink
+        href="/tools/markup-converter/"
+        title="标记语言转换"
+        description="转换 Markdown、HTML、Typst 与 LaTeX。"
+        icon={FileOutput}
+      />
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .hero {
+    display: flex;
+    align-items: flex-start;
+    gap: 28px;
+    padding-block: 24px 64px;
+  }
+
+  .hero-avatar {
+    width: 96px;
+    height: 96px;
+    border: 1px solid var(--border);
+    border-radius: 9999px;
+    object-fit: cover;
+  }
+
+  .hero-copy h1 {
+    font-size: 1.9rem;
+    font-weight: 700;
+  }
+
+  .hero-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 22px;
+  }
+
+  .hero-links a {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 11px;
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) - 2px);
+    color: var(--muted);
+    font-size: 0.84rem;
+    text-decoration: none;
+  }
+
+  .hero-links a:hover {
+    color: var(--text);
+    border-color: var(--border-strong);
+  }
+
+  .home-section {
+    min-width: 0;
+  }
+
+  .home-section + .home-section {
+    margin-top: 82px;
+  }
+
+  .tool-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  @media (max-width: 800px) {
+    .hero {
+      flex-direction: column;
+      gap: 24px;
+      padding-bottom: 58px;
+    }
+
+    .hero-avatar {
+      width: 72px;
+      height: 72px;
+    }
+
+    .tool-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

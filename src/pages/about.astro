@@ -1,0 +1,100 @@
+---
+import { CodeXml, Mail, MessageSquare } from "@lucide/astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="关于" description="关于 yuki1936，也叫 neri。" wide>
+  <div class="about-layout">
+    <img class="avatar" src="/avatar.jpg" alt="yuki1936 的头像" width="128" height="128" />
+    <div>
+      <p class="eyebrow">About</p>
+      <h1>yuki1936 / neri</h1>
+      <div class="about-copy">
+        <p>
+          I started with Android development in Java and later learned C. I have not
+          used either language regularly for quite a while. Most of my current work
+          is in Rust, Python, Go, and TypeScript.
+        </p>
+        <p>The name neri comes from a visual novel character I like.</p>
+      </div>
+      <div class="contact-links">
+        <a href="https://github.com/yuki1936">
+          <CodeXml size={17} aria-hidden="true" /> GitHub
+        </a>
+        <a href="mailto:yukikaze@disroot.org">
+          <Mail size={17} aria-hidden="true" /> Email
+        </a>
+        <a href="https://matrix.to/#/@yuki1936:matrix.org">
+          <MessageSquare size={17} aria-hidden="true" /> Matrix
+        </a>
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .about-layout {
+    display: grid;
+    grid-template-columns: 128px minmax(0, 1fr);
+    align-items: start;
+    gap: 38px;
+    max-width: 720px;
+  }
+
+  .avatar {
+    width: 128px;
+    height: 128px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    object-fit: cover;
+  }
+
+  .about-copy {
+    margin-top: 28px;
+    color: var(--muted);
+  }
+
+  .about-copy p {
+    margin-block: 0 14px;
+  }
+
+  .about-copy strong {
+    color: var(--text);
+  }
+
+  .contact-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 28px;
+  }
+
+  .contact-links a {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 11px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--muted);
+    font-size: 0.84rem;
+    text-decoration: none;
+  }
+
+  .contact-links a:hover {
+    color: var(--text);
+    border-color: var(--border-strong);
+  }
+
+  @media (max-width: 560px) {
+    .about-layout {
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+
+    .avatar {
+      width: 88px;
+      height: 88px;
+    }
+  }
+</style>
