@@ -35,6 +35,22 @@ describe("jwtDecode", () => {
     expect(parts.signature).toBe("SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c");
   });
 
+  it("decodes segments containing base64url - and _ characters", () => {
+    // 该 payload 的标准 base64（eyJrIjoiYT/Du2E+In0=）同时含 "+" 与 "/"，
+    // 换成 base64url 后必然包含 "-" 与 "_" 两个特殊字符。
+    const header = base64Encode('{"alg":"HS256"}').replace(/=+$/, "");
+    const payload = base64Encode('{"k":"a?ûa>"}')
+      .replaceAll("+", "-")
+      .replaceAll("/", "_")
+      .replace(/=+$/, "");
+    expect(payload).toContain("-");
+    expect(payload).toContain("_");
+
+    const parts = jwtDecode(`${header}.${payload}.sig`);
+    expect(parts.header).toEqual({ alg: "HS256" });
+    expect(parts.payload).toEqual({ k: "a?ûa>" });
+  });
+
   it("rejects malformed tokens", () => {
     expect(() => jwtDecode("only.two")).toThrow(/三段/);
     expect(() => jwtDecode("a.b.c")).toThrow(/base64url/);

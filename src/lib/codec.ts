@@ -27,7 +27,7 @@ export interface JwtParts {
 }
 
 function decodeBase64Url(segment: string): string {
-  const padded = segment.replaceAll("-", "+").replaceAll("_", "=").padEnd(
+  const padded = segment.replaceAll("-", "+").replaceAll("_", "/").padEnd(
     Math.ceil(segment.length / 4) * 4,
     "=",
   );

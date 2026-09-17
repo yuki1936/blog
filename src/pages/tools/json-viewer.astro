@@ -121,6 +121,8 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
   let activeView: ViewName = "tree";
   let selectedPath: JsonPath = [];
   let selectedIsContainer = false;
+  // 重建树之前收集已展开节点的 path，编辑后恢复展开状态。
+  let openPaths: Set<string> | null = null;
 
   function setStatus(message: string, state = "") {
     if (!status) return;
@@ -203,7 +205,10 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 
     const details = document.createElement("details");
     details.className = "json-node";
-    details.open = level === 0;
+    details.dataset.jsonPath = JSON.stringify(path);
+    details.open = openPaths
+      ? openPaths.has(JSON.stringify(path))
+      : level === 0;
     const summary = document.createElement("summary");
     summary.className = "json-node-row";
     appendProperty(summary, property);
@@ -239,7 +244,16 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 
   function renderTree() {
     if (!tree || !empty) return;
+    const existing = tree.querySelector("details");
+    openPaths = existing
+      ? new Set(
+          [...tree.querySelectorAll("details")]
+            .filter((node) => node.open)
+            .map((node) => node.dataset.jsonPath ?? ""),
+        )
+      : null;
     tree.replaceChildren(createNode(parsedJson, null, [], 0));
+    openPaths = null;
     tree.hidden = false;
     empty.hidden = true;
   }
@@ -312,8 +326,13 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 
     if (action === "copy") {
       const text = JSON.stringify(current, null, 2) ?? String(current);
-      await navigator.clipboard.writeText(text);
-      return setStatus("节点已复制", "success");
+      try {
+        await navigator.clipboard.writeText(text);
+        setStatus("节点已复制", "success");
+      } catch {
+        setStatus("复制失败，请检查剪贴板权限", "error");
+      }
+      return;
     }
 
     if (action === "edit" && !selectedIsContainer) {
@@ -387,8 +406,12 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
       : activeView === "go"
         ? goOutput?.textContent
         : JSON.stringify(parsedJson, null, 2);
-    await navigator.clipboard.writeText(content ?? "");
-    setStatus("当前视图已复制", "success");
+    try {
+      await navigator.clipboard.writeText(content ?? "");
+      setStatus("当前视图已复制", "success");
+    } catch {
+      setStatus("复制失败，请检查剪贴板权限", "error");
+    }
   });
 
   document.querySelector("#expand-all")?.addEventListener("click", () => {

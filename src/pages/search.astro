@@ -87,7 +87,14 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       const row = document.createElement("a");
       row.className = "search-row";
       row.href = data.url;
-      row.innerHTML = `<strong>${data.meta?.title ?? data.url}</strong><span class="search-excerpt">${data.excerpt}</span>`;
+      const title = document.createElement("strong");
+      title.textContent = data.meta?.title ?? data.url;
+      row.append(title);
+      // excerpt 含 <mark> 高亮标记，用惰性文档解析而不是 innerHTML，避免畸形内容破坏结构。
+      const excerpt = new DOMParser()
+        .parseFromString(`<span class="search-excerpt">${data.excerpt}</span>`, "text/html")
+        .body.firstElementChild;
+      if (excerpt) row.append(excerpt);
       results.append(row);
     }
     setStatus(`找到 ${found.length} 条结果`, "success");

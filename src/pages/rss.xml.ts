@@ -22,6 +22,9 @@ export async function GET(context: APIContext) {
       let html = await container.renderToString(Content);
       // 订阅器里相对路径会失效，全部补成绝对地址。
       html = html.replace(/(src|href)="\/([^"]*)"/g, `$1="${site.toString()}$2"`);
+      // 纯锚点链接会指向订阅器自身，补成文章页绝对地址。
+      const articleUrl = new URL(`/articles/${getArticleSlug(article)}/`, site).toString();
+      html = html.replace(/href="#([^"]*)"/g, `href="${articleUrl}#$1"`);
       return {
         title: article.data.title,
         description: article.data.description,

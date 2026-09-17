@@ -160,6 +160,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
   const compare = element<HTMLInputElement>("#blurhash-compare");
   const divider = element<HTMLElement>("#blurhash-divider");
   let view: PreviewMode = "compare";
+  let punchFrame = 0;
 
   function setStatus(message: string, state: "success" | "error" = "success") {
     status.textContent = message;
@@ -306,7 +307,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 
   function updateView() {
     preview.dataset.view = view;
-    document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach((button) => {
+    document.querySelectorAll<HTMLButtonElement>("button[data-view]").forEach((button) => {
       const active = button.dataset.view === view;
       button.classList.toggle("active", active);
       button.setAttribute("aria-pressed", String(active));
@@ -335,7 +336,11 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
     errorOutput.hidden = true;
   });
   punch.addEventListener("input", () => {
-    if (renderHash()) setStatus("色彩增强已更新");
+    // 拖动时会高频触发，每帧最多全量解码一次。
+    window.cancelAnimationFrame(punchFrame);
+    punchFrame = window.requestAnimationFrame(() => {
+      if (renderHash()) setStatus("色彩增强已更新");
+    });
   });
   element("#blurhash-decode").addEventListener("click", () => {
     if (renderHash()) setStatus("Hash 已解码");
@@ -348,15 +353,25 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
       setStatus("无法访问剪贴板", "error");
     }
   });
-  element("#blurhash-download").addEventListener("click", () => {
+  element("#blurhash-download").addEventListener("click", async () => {
     if (!renderHash()) return;
-    const link = document.createElement("a");
-    link.download = "blurhash-placeholder.png";
-    link.href = blurCanvas.toDataURL("image/png");
-    link.click();
-    setStatus("占位图已生成");
+    try {
+      const blob = await new Promise<Blob | null>((resolve) =>
+        blurCanvas.toBlob(resolve, "image/png"),
+      );
+      if (!blob) throw new Error("canvas toBlob returned no blob");
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.download = "blurhash-placeholder.png";
+      link.href = url;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+      setStatus("占位图已生成");
+    } catch {
+      setStatus("占位图生成失败", "error");
+    }
   });
-  document.querySelectorAll<HTMLButtonElement>("[data-view]").forEach((button) => {
+  document.querySelectorAll<HTMLButtonElement>("button[data-view]").forEach((button) => {
     button.addEventListener("click", () => {
       view = button.dataset.view as PreviewMode;
       updateView();

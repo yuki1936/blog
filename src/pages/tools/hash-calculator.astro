@@ -40,8 +40,12 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
     status.dataset.state = state;
   }
 
+  let renderToken = 0;
+
   async function renderHashes(data: Uint8Array, label: string) {
     if (!results) return;
+    // 文本与文件切换存在并发，只有最后一次计算允许写入结果。
+    const token = ++renderToken;
     setStatus(`正在计算 ${label} 的哈希…`);
     const rows = await Promise.all(
       hashAlgorithms.map(async (algorithm) => {
@@ -49,6 +53,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
         return `<div class="hash-row"><span class="hash-name">${algorithm}</span><code class="hash-value">${hex}</code><button class="tool-button hash-copy" type="button" data-hash="${hex}">复制</button></div>`;
       }),
     );
+    if (token !== renderToken) return;
     results.innerHTML = rows.join("");
     setStatus(`${label}的哈希已就绪`, "success");
   }

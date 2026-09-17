@@ -179,7 +179,8 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
   let sourceFile: File | null = null;
   let processMode: ProcessMode = "crop";
   let crop: CropArea = { x: 0, y: 0, width: 1, height: 1 };
-  let dragStart: { x: number; y: number } | null = null;
+  let dragStart: { x: number; y: number; clientX: number; clientY: number; moved: boolean } | null =
+    null;
 
   function setStatus(message: string, state = "") {
     if (!status) return;
@@ -398,19 +399,31 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
   frame?.addEventListener("pointerdown", (event) => {
     if (processMode !== "crop" || !sourceImage?.naturalWidth) return;
     frame.setPointerCapture(event.pointerId);
-    dragStart = pointInImage(event);
-    const scaleX = sourceImage.naturalWidth / sourceImage.clientWidth;
-    const scaleY = sourceImage.naturalHeight / sourceImage.clientHeight;
-    setCrop({
-      x: dragStart.x * scaleX,
-      y: dragStart.y * scaleY,
-      width: 1,
-      height: 1,
-    });
+    // 单纯的单击不应清掉已有裁切，先记录起点，拖动超过阈值才开启新区间。
+    dragStart = {
+      ...pointInImage(event),
+      clientX: event.clientX,
+      clientY: event.clientY,
+      moved: false,
+    };
   });
 
   frame?.addEventListener("pointermove", (event) => {
     if (!dragStart || !sourceImage?.naturalWidth) return;
+    if (!dragStart.moved) {
+      if (Math.hypot(event.clientX - dragStart.clientX, event.clientY - dragStart.clientY) < 4) {
+        return;
+      }
+      dragStart.moved = true;
+      const scaleX = sourceImage.naturalWidth / sourceImage.clientWidth;
+      const scaleY = sourceImage.naturalHeight / sourceImage.clientHeight;
+      setCrop({
+        x: dragStart.x * scaleX,
+        y: dragStart.y * scaleY,
+        width: 1,
+        height: 1,
+      });
+    }
     const point = pointInImage(event);
     const left = Math.min(dragStart.x, point.x);
     const top = Math.min(dragStart.y, point.y);
