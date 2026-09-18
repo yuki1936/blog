@@ -228,6 +228,7 @@ test("BlurHash tool encodes and decodes images locally", async ({ page }) => {
 
 test("article tables of contents and heading permalinks follow article length", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
+  await page.addInitScript(() => localStorage.setItem("theme", "light"));
   await page.goto("/articles/life/2026-8-3-songs-i-listen-to/");
   const toc = page.locator(".article-toc");
   await expect(toc).toBeVisible();
@@ -362,32 +363,37 @@ test("document converter rejects oversized imports and accepts drops", async ({ 
   await expect(page.locator("#source-format")).toHaveValue("markdown");
 });
 
-test("theme toggle switches and persists the dark theme", async ({ page }) => {
+test("theme toggle switches and persists the light theme", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
-  await expect(page.locator("html")).not.toHaveClass(/dark/);
-  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#ffffff");
-
-  await page.getByRole("button", { name: "切换到深色主题" }).click();
   await expect(page.locator("html")).toHaveClass(/dark/);
   await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#09090b");
   await expect(page.locator("body")).toHaveCSS("background-color", "rgb(9, 9, 11)");
-  expect(await page.evaluate(() => localStorage.getItem("theme"))).toBe("dark");
-
-  await page.reload();
-  await expect(page.locator("html")).toHaveClass(/dark/);
+  expect(await page.evaluate(() => localStorage.getItem("theme"))).toBeNull();
 
   await page.getByRole("button", { name: "切换到浅色主题" }).click();
-  expect(await page.evaluate(() => localStorage.getItem("theme"))).toBe("light");
   await expect(page.locator("html")).not.toHaveClass(/dark/);
-});
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#ffffff");
+  await expect(page.locator("body")).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  expect(await page.evaluate(() => localStorage.getItem("theme"))).toBe("light");
 
-test("prefers-color-scheme dark applies dark before first paint", async ({ page }) => {
-  await page.emulateMedia({ colorScheme: "dark" });
-  await page.goto("/");
+  await page.reload();
+  await expect(page.locator("html")).not.toHaveClass(/dark/);
+
+  await page.getByRole("button", { name: "切换到深色主题" }).click();
   await expect(page.locator("html")).toHaveClass(/dark/);
   await expect(page.locator("body")).toHaveCSS("background-color", "rgb(9, 9, 11)");
-  expect(await page.evaluate(() => localStorage.getItem("theme"))).toBeNull();
+  expect(await page.evaluate(() => localStorage.getItem("theme"))).toBe("dark");
+});
+
+test("stored light theme wins over the dark default before first paint", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.addInitScript(() => localStorage.setItem("theme", "light"));
+  await page.goto("/");
+  await expect(page.locator("html")).not.toHaveClass(/dark/);
+  await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute("content", "#ffffff");
+  await expect(page.locator("body")).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  expect(await page.evaluate(() => localStorage.getItem("theme"))).toBe("light");
 });
 
 test("hash calculator digests text locally", async ({ page }) => {
@@ -460,6 +466,7 @@ test("visual snapshots", async ({ page }) => {
   await page.goto("/");
   await page.screenshot({ path: "artifacts/home-desktop-dark.png", fullPage: true });
   await page.emulateMedia({ colorScheme: "light" });
+  await page.addInitScript(() => localStorage.setItem("theme", "light"));
   await page.goto("/");
   await page.screenshot({ path: "artifacts/home-desktop.png", fullPage: true });
 
