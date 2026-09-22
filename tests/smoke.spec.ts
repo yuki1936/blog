@@ -6,6 +6,7 @@ const pages = [
   "/articles/",
   "/articles/life/",
   "/articles/tech/",
+  "/articles/tech/2026-09-22-home-network-architecture-2-0/",
   "/tools/",
   "/tools/dns-lookup/",
   "/tools/json-viewer/",
@@ -61,6 +62,7 @@ test("sitemap exposes canonical routes and excludes legacy redirects", async ({ 
   for (const canonicalPath of [
     "/articles/",
     "/articles/life/2026-8-3-songs-i-listen-to/",
+    "/articles/tech/2026-09-22-home-network-architecture-2-0/",
     "/tools/dns-lookup/",
     "/tools/json-viewer/",
     "/tools/image-processor/",
