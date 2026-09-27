@@ -25,6 +25,7 @@ const rssUrl = new URL("rss.xml", Astro.site);
 <!doctype html>
 <html lang="zh-CN">
   <head>
+    <style is:inline>@layer theme, base, components, utilities;</style>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content={description} />
@@ -88,6 +89,7 @@ const rssUrl = new URL("rss.xml", Astro.site);
 </html>
 
 <style>
+  @layer components {
   .site-footer {
     display: flex;
     min-height: 72px;
@@ -130,5 +132,6 @@ const rssUrl = new URL("rss.xml", Astro.site);
       justify-content: center;
       gap: 10px;
     }
+  }
   }
 </style>

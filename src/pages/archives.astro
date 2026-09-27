@@ -54,6 +54,7 @@ const years = [...byYear.keys()].sort((left, right) => right - left);
 </BaseLayout>
 
 <style>
+  @layer components {
   .page-header {
     margin-bottom: 42px;
   }
@@ -99,13 +100,13 @@ const years = [...byYear.keys()].sort((left, right) => right - left);
   }
 
   .year-list a:hover .archive-title {
-    color: var(--accent-strong);
+    color: var(--primary-hover);
   }
 
   .archive-category {
     flex: none;
     margin-left: auto;
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 0.76rem;
   }
 
@@ -113,5 +114,6 @@ const years = [...byYear.keys()].sort((left, right) => right - left);
     .archive-category {
       display: none;
     }
+  }
   }
 </style>

@@ -1,6 +1,6 @@
 ---
-import { Hash } from "@lucide/astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import { buttonVariants } from "../../components/ui/button";
 ---
 
 <BaseLayout title="哈希计算器" description="在本地计算文本或文件的 SHA 系列哈希。" wide>
@@ -22,7 +22,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
   </div>
 
   <p id="hash-status" class="status-line" aria-live="polite">等待输入</p>
-  <div id="hash-results" class="hash-results"></div>
+  <div id="hash-results" class="hash-results" data-copy-class={buttonVariants({ variant: "outline", size: "sm" })}></div>
 </BaseLayout>
 
 <script>
@@ -50,7 +50,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
     const rows = await Promise.all(
       hashAlgorithms.map(async (algorithm) => {
         const hex = await digestHex(algorithm, data);
-        return `<div class="hash-row"><span class="hash-name">${algorithm}</span><code class="hash-value">${hex}</code><button class="tool-button hash-copy" type="button" data-hash="${hex}">复制</button></div>`;
+        return `<div class="hash-row"><span class="hash-name">${algorithm}</span><code class="hash-value">${hex}</code><button class="${results.dataset.copyClass} hash-copy" data-slot="button" type="button" data-hash="${hex}">复制</button></div>`;
       }),
     );
     if (token !== renderToken) return;
@@ -99,6 +99,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 </script>
 
 <style>
+  @layer components {
   .tool-header {
     margin-bottom: 42px;
   }
@@ -132,7 +133,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
   }
 
   .hash-name {
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 0.8rem;
     font-weight: 650;
   }
@@ -159,5 +160,6 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
       grid-column: 1 / -1;
       justify-self: end;
     }
+  }
   }
 </style>

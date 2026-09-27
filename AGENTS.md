@@ -3,7 +3,8 @@
 ## Project
 
 This is a statically generated personal blog and browser-tool site built with
-Astro, TypeScript, Markdown/MDX, and plain CSS. A Cloudflare Worker with static
+Astro, TypeScript, Markdown, Tailwind CSS, and shadcn/ui. Complex browser tools
+use React islands; content pages remain statically rendered. A Cloudflare Worker with static
 assets (git-connected, configured by `wrangler.jsonc`) hosts the generated site
 at https://yuki1936.com. Keep all production behavior compatible with Astro's
 static output. There is no CI: run `npm run test` and `npm run test:e2e`
@@ -25,6 +26,8 @@ provider, so end-to-end tests do not depend on external network availability.
 
 - `src/pages/`: Astro routes and page-specific browser wiring
 - `src/components/`: shared Astro components
+- `src/components/tools/`: React islands for JSON, image, BlurHash, and markup tools
+- `src/components/ui/`: shadcn/ui components, also rendered statically in Astro
 - `src/layouts/BaseLayout.astro`: global document layout
 - `src/styles/global.css`: design tokens and shared UI styles
 - `src/content/articles/`: Markdown and MDX articles
@@ -37,14 +40,16 @@ provider, so end-to-end tests do not depend on external network availability.
 ## Implementation Rules
 
 - Preserve Astro static output. Do not introduce server-only runtime features.
-- Prefer Astro components and plain TypeScript. Do not add React, Vue, Svelte,
-  Tailwind, or another UI framework unless explicitly requested.
+- Keep content and simple interactions in Astro and plain TypeScript. Use React
+  islands for complex tool state; do not hydrate static shared controls.
+- Use Tailwind CSS and shadcn/ui with the shared zinc design variables. Custom
+  CSS belongs in the components layer so Tailwind utilities can override it.
 - Reuse the colors, spacing, widths, controls, and typography defined in
   `src/styles/global.css`.
 - Preserve the shadcn-style monochrome visual system: zinc tokens, light and
   dark themes driven by the `.dark` class on `<html>` (inline no-flash script in
   BaseLayout, toggle in Header), no colored accents except `--danger` for errors.
-- Use Lucide icons through `@lucide/astro`.
+- Use Lucide icons through `@lucide/astro` in Astro and `lucide-react` in React.
 - Keep browser tools local-first. User files and JSON must not be uploaded. DNS
   lookup is the intentional network-backed exception.
 - Move reusable computation into `src/lib/`; keep DOM wiring in the page.

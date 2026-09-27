@@ -21,6 +21,7 @@ const { href, title, description, icon: Icon } = Astro.props;
 </a>
 
 <style>
+  @layer components {
   .tool-link {
     display: grid;
     min-height: 110px;
@@ -48,7 +49,7 @@ const { href, title, description, icon: Icon } = Astro.props;
     place-items: center;
     border: 1px solid var(--border);
     border-radius: 5px;
-    color: var(--accent);
+    color: var(--primary);
     background: var(--bg);
   }
 
@@ -62,12 +63,13 @@ const { href, title, description, icon: Icon } = Astro.props;
   }
 
   .tool-copy small {
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 0.82rem;
     line-height: 1.55;
   }
 
   .arrow {
     color: var(--faint);
+  }
   }
 </style>

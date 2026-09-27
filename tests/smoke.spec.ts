@@ -97,6 +97,9 @@ test("pages render without horizontal overflow", async ({ page }) => {
       clientWidth: document.documentElement.clientWidth,
     }));
     expect(dimensions.scrollWidth, pathname).toBeLessThanOrEqual(dimensions.clientWidth);
+    for (const label of await page.locator(".nav-links a span").all()) {
+      expect(await label.evaluate((element) => element.getBoundingClientRect().height), pathname).toBeLessThan(28);
+    }
   }
   expect(runtimeErrors).toEqual([]);
 });
@@ -172,7 +175,7 @@ test("image tool creates a local output", async ({ page }) => {
   await expect(page.locator("#output-panel")).toBeVisible();
   await expect(page.locator("#download-image")).toHaveAttribute("download", /processed\.webp$/);
 
-  await page.getByRole("button", { name: "等分", exact: true }).click();
+  await page.getByRole("tab", { name: "等分", exact: true }).click();
   await page.locator("#split-rows").fill("2");
   await page.locator("#split-columns").fill("3");
   await page.getByRole("button", { name: "生成切片" }).click();
@@ -181,6 +184,118 @@ test("image tool creates a local output", async ({ page }) => {
   await expect(page.locator("#download-slices")).toHaveAttribute("download", /-2x3\.zip$/);
   await expect(page.locator(".slice-card").first().getByRole("link", { name: "下载" }))
     .toHaveAttribute("download", /-r01-c01\.webp$/);
+});
+
+test("React JSON editor preserves keys, edits nodes and supports keyboard tabs", async ({
+  page,
+}) => {
+  await page.goto("/tools/json-viewer/");
+  await page
+    .locator("#json-input")
+    .fill('{"name":"neri","items":[1,2],"__proto__":{"safe":true}}');
+  await page.getByRole("button", { name: "解析", exact: true }).click();
+  await page.getByRole("button", { name: "全部展开", exact: true }).click();
+  await expect(page.locator("#json-tree")).toContainText("safe");
+  await page
+    .locator(".leaf-row")
+    .filter({ has: page.locator(".node-key", { hasText: /^name$/ }) })
+    .click({ button: "right" });
+  await page.getByRole("menuitem", { name: "编辑值" }).click();
+  await page.getByRole("textbox", { name: "节点值" }).fill("updated");
+  await page.getByRole("button", { name: "保存", exact: true }).click();
+  await expect(page.locator("#json-input")).toHaveValue(/"name": "updated"/);
+  await expect(page.locator("#json-input")).toHaveValue(/"__proto__"/);
+  await expect(page.locator("#json-tree")).toContainText("safe");
+  await page.getByRole("tab", { name: "树形视图" }).focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("tab", { name: "Rust" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await page.getByRole("button", { name: "清空", exact: true }).click();
+  await expect(page.locator("#rust-output")).toBeEmpty();
+  await page.locator("#json-input").fill("null");
+  await page.getByRole("button", { name: "解析", exact: true }).click();
+  await page.getByRole("tab", { name: "树形视图" }).click();
+  await expect(page.locator("#json-tree")).toContainText("null");
+});
+
+test("image tool discards a superseded export", async ({ page }) => {
+  await page.goto("/tools/image-processor/");
+  await page
+    .locator("#image-input")
+    .setInputFiles(path.resolve("public/avatar.jpg"));
+  await expect(page.locator("#image-workspace")).toBeVisible();
+  await page.evaluate(() => {
+    const original = HTMLCanvasElement.prototype.toBlob;
+    HTMLCanvasElement.prototype.toBlob = function (callback, type, quality) {
+      return original.call(
+        this,
+        (blob) => setTimeout(() => callback(blob), 300),
+        type,
+        quality,
+      );
+    };
+  });
+  await page.getByRole("button", { name: "生成图片" }).click();
+  await page.getByRole("tab", { name: "等分", exact: true }).click();
+  await page.waitForTimeout(400);
+  await expect(page.locator("#output-panel")).toBeHidden();
+  await page.getByRole("button", { name: "生成切片" }).click();
+  await expect(page.locator(".slice-card")).toHaveCount(4);
+});
+
+test("static pages avoid React hydration and share the tool theme", async ({
+  page,
+}) => {
+  for (const pathname of [
+    "/",
+    "/articles/",
+    "/tools/dns-lookup/",
+    "/tools/codec/",
+  ]) {
+    await page.goto(pathname);
+    await expect(page.locator("astro-island[component-url]")).toHaveCount(0);
+    await expect(page.locator("#theme-toggle")).toHaveAttribute(
+      "data-slot",
+      "button",
+    );
+    expect(
+      await page.evaluate(() =>
+        getComputedStyle(document.documentElement)
+          .getPropertyValue("--background")
+          .trim(),
+      ),
+    ).toBe("#09090b");
+  }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/");
+  await expect(page.locator("h1")).toHaveCSS("font-size", "30.4px");
+  await expect(page.locator(".icon-sun")).toBeHidden();
+  await expect(page.locator(".icon-moon")).toBeVisible();
+  expect(await page.locator(".nav.shell").evaluate((element) => element.getBoundingClientRect().left)).toBe(180);
+  await page.goto("/tools/json-viewer/");
+  await page.getByRole("button", { name: "切换到浅色主题" }).click();
+  await expect.poll(() => page.locator("#json-parse")
+    .evaluate((button) => getComputedStyle(button).backgroundColor))
+    .toBe("rgb(24, 24, 27)");
+});
+
+test("React tool inputs stay disabled until hydration completes", async ({ page }) => {
+  let release!: () => void;
+  const hydration = new Promise<void>((resolve) => { release = resolve; });
+  await page.route("**/_astro/client.*.js", async (route) => {
+    await hydration;
+    await route.continue();
+  });
+  await page.goto("/tools/json-viewer/", { waitUntil: "domcontentloaded" });
+  await expect(page.locator("#json-input")).toBeDisabled();
+  await expect(page.locator("#json-parse")).toBeDisabled();
+  release();
+  await expect(page.locator("#json-input")).toBeEnabled();
+  await page.locator("#json-input").fill('{"early":"preserved"}');
+  await page.getByRole("button", { name: "解析", exact: true }).click();
+  await expect(page.locator("#json-tree")).toContainText("preserved");
 });
 
 test("image tool rejects oversized files and dimensions", async ({ page }) => {
@@ -365,6 +480,26 @@ test("document converter rejects oversized imports and accepts drops", async ({ 
   await expect(page.locator("#source-format")).toHaveValue("markdown");
 });
 
+test("document converter clears pending work and can convert again", async ({ page }) => {
+  await page.goto("/tools/markup-converter/");
+  await expect(page.locator("#convert-status")).toHaveText("转换器已就绪", { timeout: 15_000 });
+  await page.locator("#document-input").fill("# Cancelled");
+  await page.evaluate(() => {
+    document.querySelector<HTMLButtonElement>("#convert-document")!.click();
+    document.querySelector<HTMLButtonElement>("#clear-document")!.click();
+  });
+  await expect(page.locator("#document-input")).toHaveValue("");
+  await expect(page.locator("#convert-document")).toBeEnabled({ timeout: 15_000 });
+  await expect(page.locator("#document-output")).toHaveValue("");
+  await page.locator("#document-input").fill("# Current");
+  await page.getByRole("button", { name: "转换", exact: true }).click();
+  await expect(page.locator("#document-output")).toHaveValue(/<h1>Current<\/h1>/);
+  await page.getByRole("tab", { name: "AST" }).click();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "下载", exact: true }).click();
+  expect((await download).suggestedFilename()).toBe("document.ast.json");
+});
+
 test("theme toggle switches and persists the light theme", async ({ page }) => {
   await page.emulateMedia({ colorScheme: "light" });
   await page.goto("/");
@@ -489,7 +624,7 @@ test("visual snapshots", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/tools/image-processor/");
   await page.locator("#image-input").setInputFiles(path.resolve("public/avatar.jpg"));
-  await page.getByRole("button", { name: "等分", exact: true }).click();
+  await page.getByRole("tab", { name: "等分", exact: true }).click();
   await page.getByRole("button", { name: "3 × 3" }).click();
   await page.getByRole("button", { name: "生成切片" }).click();
   await expect(page.locator(".slice-card")).toHaveCount(9);
@@ -509,4 +644,17 @@ test("visual snapshots", async ({ page }) => {
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: "artifacts/converter-mobile.png", fullPage: false });
+
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/tools/blurhash-tool/");
+  await expect(page.locator("#blurhash-value")).toHaveValue(/^.{28}$/);
+  await page.screenshot({ path: "artifacts/blurhash-desktop.png", fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: "artifacts/blurhash-mobile.png", fullPage: true });
+
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/articles/tech/2026-8-2-building-markweft-rs/");
+  await page.screenshot({ path: "artifacts/article-desktop.png", fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: "artifacts/article-mobile.png", fullPage: true });
 });

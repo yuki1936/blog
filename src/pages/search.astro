@@ -102,6 +102,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 </script>
 
 <style>
+  @layer components {
   .page-header {
     margin-bottom: 34px;
   }
@@ -137,11 +138,11 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   }
 
   .search-row:hover strong {
-    color: var(--accent-strong);
+    color: var(--primary-hover);
   }
 
   .search-excerpt {
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 0.82rem;
     line-height: 1.6;
   }
@@ -149,5 +150,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   .search-excerpt :global(mark) {
     color: var(--text);
     background: var(--surface-raised);
+  }
   }
 </style>

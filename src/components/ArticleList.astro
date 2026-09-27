@@ -42,6 +42,7 @@ const { articles, emptyText = "这里还没有文章。" } = Astro.props;
 }
 
 <style>
+  @layer components {
   .article-list {
     margin: 0;
     padding: 0;
@@ -72,7 +73,7 @@ const { articles, emptyText = "这里还没有文章。" } = Astro.props;
     display: -webkit-box;
     overflow: hidden;
     margin: 0;
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 0.88rem;
     line-height: 1.55;
     -webkit-box-orient: vertical;
@@ -88,6 +89,7 @@ const { articles, emptyText = "这里还没有文章。" } = Astro.props;
   }
 
   .article-meta span {
-    color: var(--accent);
+    color: var(--primary);
+  }
   }
 </style>

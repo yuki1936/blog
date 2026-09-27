@@ -71,6 +71,7 @@ const articles = sortArticles(
 </BaseLayout>
 
 <style>
+  @layer components {
   .hero {
     display: flex;
     align-items: flex-start;
@@ -105,7 +106,7 @@ const articles = sortArticles(
     padding: 7px 11px;
     border: 1px solid var(--border);
     border-radius: calc(var(--radius) - 2px);
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 0.84rem;
     text-decoration: none;
   }
@@ -144,5 +145,6 @@ const articles = sortArticles(
     .tool-grid {
       grid-template-columns: 1fr;
     }
+  }
   }
 </style>

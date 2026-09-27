@@ -157,6 +157,7 @@ const minutes = readingMinutes(article.body ?? "");
 </script>
 
 <style>
+  @layer components {
   article {
     max-width: 720px;
   }
@@ -170,7 +171,7 @@ const minutes = readingMinutes(article.body ?? "");
   .article-category {
     display: inline-block;
     margin-bottom: 12px;
-    color: var(--accent);
+    color: var(--primary);
     font-size: 0.82rem;
     text-decoration: none;
   }
@@ -181,7 +182,7 @@ const minutes = readingMinutes(article.body ?? "");
 
   .article-description {
     margin: 16px 0 0;
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 1.04rem;
   }
 
@@ -206,7 +207,7 @@ const minutes = readingMinutes(article.body ?? "");
     align-items: center;
     justify-content: space-between;
     gap: 20px;
-    color: var(--muted);
+    color: var(--muted-foreground);
     cursor: pointer;
     list-style: none;
   }
@@ -260,14 +261,14 @@ const minutes = readingMinutes(article.body ?? "");
   }
 
   .article-toc a {
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 0.88rem;
     text-decoration: none;
   }
 
   .article-toc a:hover,
   .article-toc a:focus-visible {
-    color: var(--accent-strong);
+    color: var(--primary-hover);
   }
 
   .article-neighbors {
@@ -307,7 +308,7 @@ const minutes = readingMinutes(article.body ?? "");
   }
 
   .neighbor:hover span {
-    color: var(--accent-strong);
+    color: var(--primary-hover);
   }
 
   .neighbor-next {
@@ -338,5 +339,6 @@ const minutes = readingMinutes(article.body ?? "");
     .neighbor-next {
       text-align: left;
     }
+  }
   }
 </style>

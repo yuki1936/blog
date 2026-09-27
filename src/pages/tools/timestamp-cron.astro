@@ -1,5 +1,5 @@
 ---
-import { Clock } from "@lucide/astro";
+import { Button } from "../../components/ui/button";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 ---
 
@@ -14,7 +14,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
     <h2>时间戳</h2>
     <p class="now-line">
       当前 Unix 时间戳（秒）：<code id="now-ts">-</code>
-      <button class="tool-button copy-now" type="button">复制</button>
+      <Button variant="outline" className="copy-now" type="button">复制</Button>
     </p>
     <label class="field-label">
       输入时间戳（10 位秒或 13 位毫秒）
@@ -30,7 +30,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
         表达式（分 时 日 月 星期）
         <input class="field cron-input" id="cron-input" type="text" placeholder="*/5 * * * *" spellcheck="false" required />
       </label>
-      <button class="tool-button primary cron-button" type="submit">解析</button>
+      <Button className="cron-button" type="submit">解析</Button>
     </form>
     <p id="cron-status" class="status-line" aria-live="polite">等待输入</p>
   </section>
@@ -93,15 +93,14 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 </script>
 
 <style>
+  @layer components {
   .tool-header {
     margin-bottom: 42px;
   }
 
   .time-panel {
-    padding: 22px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--surface);
+    padding-block: 22px;
+    border-bottom: 1px solid var(--border);
   }
 
   .time-panel + .time-panel {
@@ -116,10 +115,11 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 
   .now-line {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 10px;
     margin: 0 0 16px;
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 0.86rem;
   }
 
@@ -153,7 +153,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
   }
 
   .ts-row span {
-    color: var(--muted);
+    color: var(--muted-foreground);
   }
 
   .ts-row code {
@@ -179,5 +179,6 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
     #cron-form {
       grid-template-columns: 1fr;
     }
+  }
   }
 </style>

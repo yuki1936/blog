@@ -1,5 +1,5 @@
 ---
-import { KeyRound } from "@lucide/astro";
+import { Button } from "../../components/ui/button";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 ---
 
@@ -17,8 +17,8 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
       <textarea id="b64-input" class="codec-textarea textarea" placeholder="输入文本或 Base64" spellcheck="false"></textarea>
     </label>
     <div class="codec-actions">
-      <button class="tool-button" type="button" data-codec="b64-encode">编码</button>
-      <button class="tool-button" type="button" data-codec="b64-decode">解码</button>
+      <Button variant="outline" type="button" data-codec="b64-encode">编码</Button>
+      <Button variant="outline" type="button" data-codec="b64-decode">解码</Button>
     </div>
   </section>
 
@@ -29,8 +29,8 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
       <textarea id="url-input" class="codec-textarea textarea" placeholder="输入文本或已编码的 URL 片段" spellcheck="false"></textarea>
     </label>
     <div class="codec-actions">
-      <button class="tool-button" type="button" data-codec="url-encode">编码</button>
-      <button class="tool-button" type="button" data-codec="url-decode">解码</button>
+      <Button variant="outline" type="button" data-codec="url-encode">编码</Button>
+      <Button variant="outline" type="button" data-codec="url-decode">解码</Button>
     </div>
   </section>
 
@@ -41,7 +41,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
       <textarea id="jwt-input" class="codec-textarea textarea" placeholder="eyJhbGciOi…" spellcheck="false"></textarea>
     </label>
     <div class="codec-actions">
-      <button class="tool-button primary" type="button" data-codec="jwt-decode">解析</button>
+      <Button type="button" data-codec="jwt-decode">解析</Button>
     </div>
     <p class="jwt-note">仅本地解析结构，不验证签名。</p>
   </section>
@@ -103,15 +103,14 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 </script>
 
 <style>
+  @layer components {
   .tool-header {
     margin-bottom: 42px;
   }
 
   .codec-panel {
-    padding: 22px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--surface);
+    padding-block: 22px;
+    border-bottom: 1px solid var(--border);
   }
 
   .codec-panel + .codec-panel {
@@ -142,5 +141,6 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 
   .output-label {
     margin-top: 18px;
+  }
   }
 </style>

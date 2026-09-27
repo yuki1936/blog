@@ -1,5 +1,7 @@
 import { defineConfig } from "astro/config";
 import sitemap from "@astrojs/sitemap";
+import react from "@astrojs/react";
+import tailwindcss from "@tailwindcss/vite";
 
 const redirects = {
   "/tools/dns": "/tools/dns-lookup/",
@@ -19,7 +21,9 @@ export default defineConfig({
   site: "https://yuki1936.com",
   output: "static",
   redirects,
+  vite: { plugins: [tailwindcss()] },
   integrations: [
+    react(),
     sitemap({
       filter: (page) => {
         const pathname = normalizePath(new URL(page).pathname);

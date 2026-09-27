@@ -44,6 +44,7 @@ import { friendLinks } from "../lib/friend-links";
 </BaseLayout>
 
 <style>
+  @layer components {
   .page-header {
     margin-bottom: 42px;
   }
@@ -89,7 +90,7 @@ import { friendLinks } from "../lib/friend-links";
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: var(--muted);
+    color: var(--muted-foreground);
     background: var(--surface-raised);
     font-weight: 650;
   }
@@ -104,7 +105,7 @@ import { friendLinks } from "../lib/friend-links";
   }
 
   .link-grid a:hover .link-name {
-    color: var(--accent-strong);
+    color: var(--primary-hover);
   }
 
   .link-arrow {
@@ -120,7 +121,7 @@ import { friendLinks } from "../lib/friend-links";
 
   .link-desc {
     overflow: hidden;
-    color: var(--muted);
+    color: var(--muted-foreground);
     font-size: 0.76rem;
     line-height: 1.5;
     text-overflow: ellipsis;
@@ -131,5 +132,6 @@ import { friendLinks } from "../lib/friend-links";
     .link-grid {
       grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     }
+  }
   }
 </style>
