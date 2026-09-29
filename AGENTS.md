@@ -7,8 +7,9 @@ Astro, TypeScript, Markdown, Tailwind CSS, and shadcn/ui. Complex browser tools
 use React islands; content pages remain statically rendered. A Cloudflare Worker with static
 assets (git-connected, configured by `wrangler.jsonc`) hosts the generated site
 at https://yuki1936.com. Keep all production behavior compatible with Astro's
-static output. There is no CI: run `npm run test` and `npm run test:e2e`
-locally before pushing — deploys are automatic on push to main.
+static output. There is no GitHub CI: run `npm run test` and `npm run test:e2e`
+locally before pushing. Pushes to main trigger the Cloudflare Worker build and
+deployment; GitHub only hosts the repository.
 
 ## Commands
 
@@ -132,4 +133,6 @@ build the Wasm package, and refresh the checked-in blog assets together.
 - Always run `npm run build` after code or content-schema changes.
 - For tool changes, run the relevant Playwright test.
 - Add new public pages to the `pages` array in `tests/smoke.spec.ts`.
-- Check both 1440px desktop and 390px mobile layouts for visual changes.
+- Check both 1440px desktop and 390px mobile layouts for visual changes. When
+  intentional layout changes affect screenshot assertions, refresh their
+  baselines with `npx playwright test --update-snapshots` after reviewing them.

@@ -16,7 +16,7 @@ const articles = sortArticles(
 
 const byYear = new Map<number, Article[]>();
 for (const article of articles) {
-  const year = article.data.published.getFullYear();
+  const year = article.data.published.getUTCFullYear();
   const group = byYear.get(year) ?? [];
   group.push(article);
   byYear.set(year, group);

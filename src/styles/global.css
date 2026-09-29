@@ -75,7 +75,7 @@
     --surface: #fafafa;
     --surface-raised: #f4f4f5;
     --text: var(--foreground);
-    --faint: #a1a1aa;
+    --faint: #71717a;
     --border: #e4e4e7;
     --border-strong: #d4d4d8;
     --warm: #3f3f46;
@@ -111,7 +111,7 @@
     --ring: #71717a;
     --surface: #18181b;
     --surface-raised: #27272a;
-    --faint: #71717a;
+    --faint: #a1a1aa;
     --border: #27272a;
     --border-strong: #3f3f46;
     --warm: #d4d4d8;

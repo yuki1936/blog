@@ -55,49 +55,60 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   }
 
   let searchTimer: number | undefined;
+  let searchVersion = 0;
   input?.addEventListener("input", () => {
+    const version = ++searchVersion;
     window.clearTimeout(searchTimer);
-    searchTimer = window.setTimeout(runSearch, 220);
-  });
-
-  async function runSearch() {
-    const query = input?.value.trim() ?? "";
-    const index = await ensurePagefind();
-    if (!index) {
-      setStatus("搜索索引不可用（开发模式下请先构建）", "error");
-      return;
-    }
-    if (query.length === 0) {
+    if (!input.value.trim()) {
       results?.replaceChildren();
       setStatus("等待输入");
       return;
     }
+    searchTimer = window.setTimeout(() => void runSearch(version), 220);
+  });
 
-    const { results: found } = await index.search(query);
-    if (!results) return;
-    results.replaceChildren();
-
-    if (found.length === 0) {
-      setStatus(`没有与 “${query}” 匹配的结果`, "error");
+  async function runSearch(version: number) {
+    const query = input?.value.trim() ?? "";
+    const index = await ensurePagefind();
+    if (version !== searchVersion) return;
+    if (!index) {
+      setStatus("搜索索引不可用（开发模式下请先构建）", "error");
       return;
     }
+    try {
+      const { results: found } = await index.search(query);
+      if (version !== searchVersion || !results) return;
 
-    for (const item of found) {
-      const data = await item.data();
-      const row = document.createElement("a");
-      row.className = "search-row";
-      row.href = data.url;
-      const title = document.createElement("strong");
-      title.textContent = data.meta?.title ?? data.url;
-      row.append(title);
-      // excerpt 含 <mark> 高亮标记，用惰性文档解析而不是 innerHTML，避免畸形内容破坏结构。
-      const excerpt = new DOMParser()
-        .parseFromString(`<span class="search-excerpt">${data.excerpt}</span>`, "text/html")
-        .body.firstElementChild;
-      if (excerpt) row.append(excerpt);
-      results.append(row);
+      if (found.length === 0) {
+        results.replaceChildren();
+        setStatus(`没有与 “${query}” 匹配的结果`, "error");
+        return;
+      }
+
+      const rows = document.createDocumentFragment();
+      for (const item of found) {
+        const data = await item.data();
+        if (version !== searchVersion) return;
+        const row = document.createElement("a");
+        row.className = "search-row";
+        row.href = data.url;
+        const title = document.createElement("strong");
+        title.textContent = data.meta?.title ?? data.url;
+        row.append(title);
+        // excerpt 含 <mark> 高亮标记，用惰性文档解析而不是 innerHTML，避免畸形内容破坏结构。
+        const excerpt = new DOMParser()
+          .parseFromString(`<span class="search-excerpt">${data.excerpt}</span>`, "text/html")
+          .body.firstElementChild;
+        if (excerpt) row.append(excerpt);
+        rows.append(row);
+      }
+      results.replaceChildren(rows);
+      setStatus(`找到 ${found.length} 条结果`, "success");
+    } catch {
+      if (version !== searchVersion) return;
+      results?.replaceChildren();
+      setStatus("搜索失败，请重试", "error");
     }
-    setStatus(`找到 ${found.length} 条结果`, "success");
   }
 </script>
 

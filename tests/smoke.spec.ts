@@ -541,6 +541,26 @@ test("hash calculator digests text locally", async ({ page }) => {
   await expect(page.locator("#hash-results")).toContainText("a9993e364706816aba3e25717850c26c9cd0d89d");
 });
 
+test("hash calculator discards a completed digest after input is cleared", async ({ page }) => {
+  await page.goto("/tools/hash-calculator/");
+  await page.evaluate(() => {
+    const digest = crypto.subtle.digest.bind(crypto.subtle);
+    Object.defineProperty(crypto.subtle, "digest", {
+      value: async (algorithm: AlgorithmIdentifier, data: BufferSource) => {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        return digest(algorithm, data);
+      },
+    });
+  });
+  await page.locator("#hash-text").fill("abc");
+  await page.waitForTimeout(300);
+  await page.locator("#hash-text").fill("");
+  await expect(page.locator("#hash-status")).toHaveText("等待输入");
+  await page.waitForTimeout(600);
+  await expect(page.locator(".hash-row")).toHaveCount(0);
+  await expect(page.locator("#hash-status")).toHaveText("等待输入");
+});
+
 test("codec tool encodes base64 and decodes jwt", async ({ page }) => {
   await page.goto("/tools/codec/");
   await page.locator("#b64-input").fill("hello");
@@ -590,6 +610,33 @@ test("search finds matching pages", async ({ page }) => {
   await expect(page.locator('.search-row[href*="building-markweft-rs"]')).toBeVisible();
 });
 
+test("search keeps only results for the latest input", async ({ page }) => {
+  await page.goto("/search/");
+  await page.evaluate(() => {
+    const index = {
+      search: async (query: string) => {
+        await new Promise((resolve) => setTimeout(resolve, query === "old" ? 700 : 50));
+        return {
+          results: [{ data: async () => ({ url: "/articles/", excerpt: query, meta: { title: query } }) }],
+        };
+      },
+    };
+    Object.defineProperty(window, "Function", {
+      value: () => async () => index,
+      configurable: true,
+    });
+  });
+  await page.locator("#search-input").fill("old");
+  await page.waitForTimeout(300);
+  await page.locator("#search-input").fill("new");
+  await expect(page.locator(".search-row strong")).toHaveText("new");
+  await page.waitForTimeout(700);
+  await expect(page.locator(".search-row strong")).toHaveText("new");
+  await page.locator("#search-input").fill("");
+  await expect(page.locator(".search-row")).toHaveCount(0);
+  await expect(page.locator("#search-status")).toHaveText("等待输入");
+});
+
 test("archives lists every published article by year", async ({ page }) => {
   await page.goto("/archives/");
   await expect(page.locator(".year-section h2").first()).toHaveText(/20\d{2}/);
@@ -598,6 +645,16 @@ test("archives lists every published article by year", async ({ page }) => {
 });
 
 test("visual snapshots", async ({ page }) => {
+  const expectVisual = async (name: string) => {
+    await page.addStyleTag({
+      content: '*, *::before, *::after { font-family: "Noto Sans", "Noto Sans CJK SC", sans-serif !important; }',
+    });
+    await expect(page).toHaveScreenshot(name, {
+      animations: "disabled",
+      maxDiffPixelRatio: 0.03,
+    });
+  };
+
   await page.emulateMedia({ colorScheme: "dark" });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/");
@@ -606,10 +663,12 @@ test("visual snapshots", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("theme", "light"));
   await page.goto("/");
   await page.screenshot({ path: "artifacts/home-desktop.png", fullPage: true });
+  await expectVisual("home-desktop.png");
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/tools/");
   await page.screenshot({ path: "artifacts/tools-mobile.png", fullPage: true });
+  await expectVisual("tools-mobile.png");
 
   const sample = '{"name":"neri","active":true,"languages":["Rust","Python","Go","TypeScript"],"profile":{"location":"China","public":true}}';
   await page.setViewportSize({ width: 1440, height: 1000 });
@@ -657,4 +716,5 @@ test("visual snapshots", async ({ page }) => {
   await page.screenshot({ path: "artifacts/article-desktop.png", fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: "artifacts/article-mobile.png", fullPage: true });
+  await expectVisual("article-mobile.png");
 });

@@ -42,47 +42,58 @@ import { buttonVariants } from "../../components/ui/button";
 
   let renderToken = 0;
 
-  async function renderHashes(data: Uint8Array, label: string) {
-    if (!results) return;
-    // 文本与文件切换存在并发，只有最后一次计算允许写入结果。
-    const token = ++renderToken;
+  async function renderHashes(data: Uint8Array, label: string, token: number) {
+    if (!results || token !== renderToken) return;
     setStatus(`正在计算 ${label} 的哈希…`);
-    const rows = await Promise.all(
-      hashAlgorithms.map(async (algorithm) => {
-        const hex = await digestHex(algorithm, data);
-        return `<div class="hash-row"><span class="hash-name">${algorithm}</span><code class="hash-value">${hex}</code><button class="${results.dataset.copyClass} hash-copy" data-slot="button" type="button" data-hash="${hex}">复制</button></div>`;
-      }),
-    );
-    if (token !== renderToken) return;
-    results.innerHTML = rows.join("");
-    setStatus(`${label}的哈希已就绪`, "success");
+    try {
+      const rows = await Promise.all(
+        hashAlgorithms.map(async (algorithm) => {
+          const hex = await digestHex(algorithm, data);
+          return `<div class="hash-row"><span class="hash-name">${algorithm}</span><code class="hash-value">${hex}</code><button class="${results.dataset.copyClass} hash-copy" data-slot="button" type="button" data-hash="${hex}">复制</button></div>`;
+        }),
+      );
+      if (token !== renderToken) return;
+      results.innerHTML = rows.join("");
+      setStatus(`${label}的哈希已就绪`, "success");
+    } catch {
+      if (token === renderToken) setStatus("哈希计算失败", "error");
+    }
   }
 
   let renderTimer: number | undefined;
   textInput?.addEventListener("input", () => {
+    const token = ++renderToken;
     window.clearTimeout(renderTimer);
+    if (fileInput) fileInput.value = "";
+    results?.replaceChildren();
+    const text = textInput.value;
+    if (text.length === 0) {
+      setStatus("等待输入");
+      return;
+    }
     renderTimer = window.setTimeout(() => {
-      const text = textInput.value;
-      if (fileInput) fileInput.value = "";
-      if (text.length === 0) {
-        results?.replaceChildren();
-        setStatus("等待输入");
-        return;
-      }
-      void renderHashes(encodeText(text), "文本");
+      void renderHashes(encodeText(text), "文本", token);
     }, 200);
   });
 
   fileInput?.addEventListener("change", async () => {
+    const token = ++renderToken;
+    window.clearTimeout(renderTimer);
     const file = fileInput.files?.[0];
     if (!file) return;
     if (textInput) textInput.value = "";
+    results?.replaceChildren();
     if (file.size > MAX_FILE_BYTES) {
       setStatus("文件不能超过 25 MiB", "error");
       return;
     }
-    const buffer = new Uint8Array(await file.arrayBuffer());
-    await renderHashes(buffer, `文件 ${file.name}`);
+    setStatus(`正在读取文件 ${file.name}…`);
+    try {
+      const buffer = new Uint8Array(await file.arrayBuffer());
+      await renderHashes(buffer, `文件 ${file.name}`, token);
+    } catch {
+      if (token === renderToken) setStatus("文件读取失败", "error");
+    }
   });
 
   results?.addEventListener("click", async (event) => {

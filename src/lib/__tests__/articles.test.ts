@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { readingMinutes } from "../articles";
+import { formatDate, readingMinutes } from "../articles";
+
+it("formats article dates independently of the build machine time zone", () => {
+  const previousTimeZone = process.env.TZ;
+  process.env.TZ = "America/Los_Angeles";
+  try {
+    expect(formatDate(new Date("2026-01-01"))).toBe("2026/01/01");
+  } finally {
+    if (previousTimeZone === undefined) delete process.env.TZ;
+    else process.env.TZ = previousTimeZone;
+  }
+});
 
 describe("readingMinutes", () => {
   it("counts CJK characters at 300 per minute", () => {
